@@ -9,6 +9,9 @@ use warnings;
 use Log::Reproducible;
 use autodie;
 use feature 'say';
+use Parallel::ForkManager;
+
+my $threads = 3;
 
 my $gff_file = "ITAG2.3_gene_models.gff3";
 my @snp_file_list = @ARGV;
@@ -46,9 +49,11 @@ for my $snp_file (@snp_file_list) {
 
 }
 
-open my $aa_change_fh, ">", "aa-changes";
+my $pm = new Parallel::ForkManager($threads);
 for my $seqid ( sort keys %cds ) {
     next unless exists $snps{$seqid};
+    my $pid = $pm->start and next;
+    open my $aa_change_fh, ">", "aa-changes.$seqid";
     for my $mrna ( sort keys $cds{$seqid} ) {
         my $mrna_start = $cds{$seqid}{$mrna}{cds}->[0]->{start};
         my $mrna_end   = $cds{$seqid}{$mrna}{cds}->[-1]->{end};
@@ -93,8 +98,10 @@ for my $seqid ( sort keys %cds ) {
         say $aa_change_fh join "\t", $mrna, $change_count, $change_summary;
 
     }
+    close $aa_change_fh;
+    $pm->finish;
 }
-close $aa_change_fh;
+$pm->wait_all_children;
 
 sub get_seq {
     my ( $fa_file, $seqid, $start, $end, $mrna_snps, $chr_snps ) = @_;
