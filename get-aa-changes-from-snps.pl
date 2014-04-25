@@ -80,20 +80,19 @@ for my $seqid ( sort keys %cds ) {
         my ( $par1_seq, $par2_seq ) = get_seq($fa_file, $seqid, $mrna_start, $mrna_end, $cds{$seqid}{$mrna}{snps}, $snps{$seqid});
         # my ( $par1_seq, $par2_seq ) = adjusted_seqs( $seq, $cds{$seqid}{$mrna}{snps} );
 
-        my $ref_spliced = '';
-        my $alt_spliced = '';
+        my $par1_spliced = '';
+        my $par2_spliced = '';
         for my $cds (@{$cds{$seqid}{$mrna}{cds}}) {
             my $cds_start = $cds->{start};
             my $cds_end = $cds->{end};
             my $cds_phase = $cds->{phase};
 
-
-            $ref_spliced .= substr $par1_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
-            $alt_spliced .= substr $par2_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
+            $par1_spliced .= substr $par1_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
+            $par2_spliced .= substr $par2_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
         }
 
-        my $ref_protein = translate($ref_spliced);
-        my $alt_protein = translate($alt_spliced);
+        my $ref_protein = translate($par1_spliced);
+        my $alt_protein = translate($par2_spliced);
 
         # $aa_subs{$mrna} = ();
         my @aa_changes = ();
@@ -133,20 +132,20 @@ close $aa_change_fh;
 # my ( $par1_seq, $par2_seq ) = get_seq($fa_file, $seqid, $mrna_start, $mrna_end, $cds{$seqid}{$mrna}{snps}, $snps{$seqid});
 # # my ( $par1_seq, $par2_seq ) = adjusted_seqs( $seq, $cds{$seqid}{$mrna}{snps} );
 
-# my $ref_spliced = '';
-# my $alt_spliced = '';
+# my $par1_spliced = '';
+# my $par2_spliced = '';
 # for my $cds (@{$cds{$seqid}{$mrna}{cds}}) {
 #     my $cds_start = $cds->{start};
 #     my $cds_end = $cds->{end};
 #     my $cds_phase = $cds->{phase};
 
 
-#     $ref_spliced .= substr $par1_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
-#     $alt_spliced .= substr $par2_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
+#     $par1_spliced .= substr $par1_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
+#     $par2_spliced .= substr $par2_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
 # }
 
-# my $ref_protein = translate($ref_spliced);
-# my $alt_protein = translate($alt_spliced);
+# my $ref_protein = translate($par1_spliced);
+# my $alt_protein = translate($par2_spliced);
 
 # my %aa_subs;
 # for my $idx (0 .. length($ref_protein) - 1) {
