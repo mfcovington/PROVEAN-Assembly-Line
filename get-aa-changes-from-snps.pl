@@ -91,6 +91,12 @@ for my $seqid ( sort keys %cds ) {
             $par2_spliced .= substr $par2_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
         }
 
+        if ( $cds{$seqid}{$mrna}{strand} eq '-' ) {
+            reverse_complement( \$par1_spliced );
+            reverse_complement( \$par2_spliced );
+            say $mrna;
+        }
+
         my $ref_protein = translate($par1_spliced);
         my $alt_protein = translate($par2_spliced);
 
@@ -214,6 +220,12 @@ sub get_seq {
 sub get_cds_snps {
     my ( $cds_start, $cds_end, $mrna_snps ) = @_;
     return grep { $_ >= $cds_start && $_ <= $cds_end } @$mrna_snps;
+}
+
+sub reverse_complement {    # Assumes no ambiguous codes
+    my $seq = shift;
+    $$seq = reverse $$seq;
+    $$seq =~ tr/ACGTacgt/TGCAtgca/;
 }
 
 sub translate {
