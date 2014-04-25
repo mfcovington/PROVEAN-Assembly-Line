@@ -1,0 +1,7 @@
+*.fa
+*.fai
+*.bam
+*.bai
+*.gff
+*.gff3
+polyDB.*
