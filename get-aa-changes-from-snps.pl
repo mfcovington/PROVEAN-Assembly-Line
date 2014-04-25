@@ -16,74 +16,6 @@ my @snp_file_list = @ARGV;
 # my $snp_file = "M82-PEN.polymorphisms/polyDB.SL2.40ch01.nr";
 my $fa_file = "S_lycopersicum_chromosomes.2.40.fa";
 
-
-my %codon_table = (
-    AAA => 'K',
-    AAC => 'N',
-    AAG => 'K',
-    AAT => 'N',
-    ACA => 'T',
-    ACC => 'T',
-    ACG => 'T',
-    ACT => 'T',
-    AGA => 'R',
-    AGC => 'S',
-    AGG => 'R',
-    AGT => 'S',
-    ATA => 'I',
-    ATC => 'I',
-    ATG => 'M',
-    ATT => 'I',
-    CAA => 'Q',
-    CAC => 'H',
-    CAG => 'Q',
-    CAT => 'H',
-    CCA => 'P',
-    CCC => 'P',
-    CCG => 'P',
-    CCT => 'P',
-    CGA => 'R',
-    CGC => 'R',
-    CGG => 'R',
-    CGT => 'R',
-    CTA => 'L',
-    CTC => 'L',
-    CTG => 'L',
-    CTT => 'L',
-    GAA => 'E',
-    GAC => 'D',
-    GAG => 'E',
-    GAT => 'D',
-    GCA => 'A',
-    GCC => 'A',
-    GCG => 'A',
-    GCT => 'A',
-    GGA => 'G',
-    GGC => 'G',
-    GGG => 'G',
-    GGT => 'G',
-    GTA => 'V',
-    GTC => 'V',
-    GTG => 'V',
-    GTT => 'V',
-    TAA => '-',
-    TAC => 'Y',
-    TAG => '-',
-    TAT => 'Y',
-    TCA => 'S',
-    TCC => 'S',
-    TCG => 'S',
-    TCT => 'S',
-    TGA => '-',
-    TGC => 'C',
-    TGG => 'W',
-    TGT => 'C',
-    TTA => 'L',
-    TTC => 'F',
-    TTG => 'L',
-    TTT => 'F',
-);
-
 my %cds;
 open my $gff_fh, "<", $gff_file;
 while (<$gff_fh>) {
@@ -286,14 +218,15 @@ sub get_cds_snps {
 }
 
 sub translate {
-    my $nt_seq = shift;
-    $nt_seq =~ tr/acgt/ACGT/;
+    my ( $nt_seq ) = @_;
+    my $codon_table = codon_table();
 
+    $nt_seq =~ tr/acgt/ACGT/;
     my $pos = 0;
     my $aa_seq;
     while ( $pos < length($nt_seq) - 2 ) {
         my $codon = substr $nt_seq, $pos, 3;
-        my $amino_acid = $codon_table{$codon};
+        my $amino_acid = $$codon_table{$codon};
         if ( defined $amino_acid ) {
             $aa_seq .= $amino_acid;
         }
@@ -305,4 +238,23 @@ sub translate {
     return $aa_seq;
 }
 
-
+sub codon_table {
+    return {
+        TTT => 'F', TCT => 'S', TAT => 'Y', TGT => 'C',
+        TTC => 'F', TCC => 'S', TAC => 'Y', TGC => 'C',
+        TTA => 'L', TCA => 'S', TAA => '-', TGA => '-',
+        TTG => 'L', TCG => 'S', TAG => '-', TGG => 'W',
+        CTT => 'L', CCT => 'P', CAT => 'H', CGT => 'R',
+        CTC => 'L', CCC => 'P', CAC => 'H', CGC => 'R',
+        CTA => 'L', CCA => 'P', CAA => 'Q', CGA => 'R',
+        CTG => 'L', CCG => 'P', CAG => 'Q', CGG => 'R',
+        ATT => 'I', ACT => 'T', AAT => 'N', AGT => 'S',
+        ATC => 'I', ACC => 'T', AAC => 'N', AGC => 'S',
+        ATA => 'I', ACA => 'T', AAA => 'K', AGA => 'R',
+        ATG => 'M', ACG => 'T', AAG => 'K', AGG => 'R',
+        GTT => 'V', GCT => 'A', GAT => 'D', GGT => 'G',
+        GTC => 'V', GCC => 'A', GAC => 'D', GGC => 'G',
+        GTA => 'V', GCA => 'A', GAA => 'E', GGA => 'G',
+        GTG => 'V', GCG => 'A', GAG => 'E', GGG => 'G',
+    };
+}
