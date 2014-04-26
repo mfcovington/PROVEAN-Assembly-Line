@@ -10,12 +10,15 @@ use Log::Reproducible;
 use autodie;
 use feature 'say';
 use Parallel::ForkManager;
+use Capture::Tiny 'capture_stderr';
 
 my $threads = 3;
 
 my $gff_file = "ITAG2.3_gene_models.gff3";
 my @snp_file_list = @ARGV;
 my $fa_file = "S_lycopersicum_chromosomes.2.40.fa";
+my $par1_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_M82_n05-Slyc.sorted.dupl_rm.bam";
+my $par2_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_PEN-Slyc.sorted.dupl_rm.bam";
 
 my %cds;
 open my $gff_fh, "<", $gff_file;
@@ -53,8 +56,8 @@ my $pm = new Parallel::ForkManager($threads);
 for my $seqid ( sort keys %cds ) {
     next unless exists $snps{$seqid};
     my $pid = $pm->start and next;
-    open my $aa_change_fh, ">", "aa-changes.$seqid";
-    say $aa_change_fh join "\t", qw(gene length snp_count aa_substitution_count aa_substitutions);
+    open my $aa_change_fh, ">", "aa-changes.SNP-count.$seqid";
+    say $aa_change_fh join "\t", qw(gene length coverage snp_count aa_substitution_count aa_substitutions);
     for my $mrna ( sort keys $cds{$seqid} ) {
         my $mrna_start = $cds{$seqid}{$mrna}{cds}->[0]->{start};
         my $mrna_end   = $cds{$seqid}{$mrna}{cds}->[-1]->{end};
@@ -72,10 +75,12 @@ for my $seqid ( sort keys %cds ) {
         my $par1_spliced = '';
         my $par2_spliced = '';
         my $total_cds_length;
+        my $total_cds_coverage = 0;
         for my $cds (@{$cds{$seqid}{$mrna}{cds}}) {
             my $cds_start = $cds->{start};
             my $cds_end = $cds->{end};
 
+            $total_cds_coverage += get_coverage( $seqid, $cds_start, $cds_end, $fa_file, $par1_bam_file, $par2_bam_file );
             $total_cds_length += $cds_end - $cds_start + 1;
             $par1_spliced .= substr $par1_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
             $par2_spliced .= substr $par2_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
@@ -100,8 +105,9 @@ for my $seqid ( sort keys %cds ) {
         my $snp_count = scalar @{ $cds{$seqid}{$mrna}{snps} };
         my $aa_change_count = scalar @aa_changes;
         my $change_summary = join ",", @aa_changes;
-        say $aa_change_fh join "\t", $mrna, $total_cds_length, $snp_count,
-            $aa_change_count, $change_summary;
+        my $coverage = sprintf "%.1f", $total_cds_coverage / $total_cds_length;
+        say $aa_change_fh join "\t", $mrna, $total_cds_length, $coverage,
+            $snp_count, $aa_change_count, $change_summary;
     }
     close $aa_change_fh;
     $pm->finish;
@@ -176,4 +182,28 @@ sub codon_table {
         GTA => 'V', GCA => 'A', GAA => 'E', GGA => 'G',
         GTG => 'V', GCG => 'A', GAG => 'E', GGG => 'G',
     };
+}
+
+sub get_coverage {
+    my ( $seqid, $start, $end, $fa_file, $par1_bam_file, $par2_bam_file ) = @_;
+    my $mpileup_cmd = "samtools mpileup -A -r $seqid:$start-$end -f $fa_file $par1_bam_file $par2_bam_file";
+
+    my $mpileup_fh;
+    capture_stderr {    # suppress mpileup output sent to stderr
+        open $mpileup_fh,   "-|", $mpileup_cmd;
+    };
+    my $coverage = 0;
+    while ( my $mpileup_line = <$mpileup_fh> ) {
+# print $mpileup_line;
+        my ( $par1_cov_with_gaps, $par1_read_bases, $par2_cov_with_gaps, $par2_read_bases ) = (split /\t/, $mpileup_line)[3,4,6,7];
+
+        # nogap coverage == gap coverage minus # of ref skips
+        $coverage += $par1_cov_with_gaps;
+        $coverage += $par2_cov_with_gaps;
+        $coverage-- for $par1_read_bases =~ m/(?<!\^)[<>]/g;
+        $coverage-- for $par2_read_bases =~ m/(?<!\^)[<>]/g;
+# say $coverage;
+    }
+    close $mpileup_fh;
+    return $coverage;
 }
