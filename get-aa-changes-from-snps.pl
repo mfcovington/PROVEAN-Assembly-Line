@@ -54,7 +54,7 @@ for my $seqid ( sort keys %cds ) {
     next unless exists $snps{$seqid};
     my $pid = $pm->start and next;
     open my $aa_change_fh, ">", "aa-changes.$seqid";
-    say $aa_change_fh join "\t", qw(gene snp_count aa_substitution_count aa_substitutions);
+    say $aa_change_fh join "\t", qw(gene length snp_count aa_substitution_count aa_substitutions);
     for my $mrna ( sort keys $cds{$seqid} ) {
         my $mrna_start = $cds{$seqid}{$mrna}{cds}->[0]->{start};
         my $mrna_end   = $cds{$seqid}{$mrna}{cds}->[-1]->{end};
@@ -71,10 +71,12 @@ for my $seqid ( sort keys %cds ) {
 
         my $par1_spliced = '';
         my $par2_spliced = '';
+        my $total_cds_length;
         for my $cds (@{$cds{$seqid}{$mrna}{cds}}) {
             my $cds_start = $cds->{start};
             my $cds_end = $cds->{end};
 
+            $total_cds_length += $cds_end - $cds_start + 1;
             $par1_spliced .= substr $par1_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
             $par2_spliced .= substr $par2_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
         }
@@ -98,8 +100,8 @@ for my $seqid ( sort keys %cds ) {
         my $snp_count = scalar @{ $cds{$seqid}{$mrna}{snps} };
         my $aa_change_count = scalar @aa_changes;
         my $change_summary = join ",", @aa_changes;
-        say $aa_change_fh join "\t", $mrna, $snp_count, $aa_change_count, $change_summary;
-
+        say $aa_change_fh join "\t", $mrna, $total_cds_length, $snp_count,
+            $aa_change_count, $change_summary;
     }
     close $aa_change_fh;
     $pm->finish;
