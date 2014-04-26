@@ -57,6 +57,7 @@ for my $seqid ( sort keys %cds ) {
     for my $mrna ( sort keys $cds{$seqid} ) {
         my $mrna_start = $cds{$seqid}{$mrna}{cds}->[0]->{start};
         my $mrna_end   = $cds{$seqid}{$mrna}{cds}->[-1]->{end};
+        @{ $cds{$seqid}{$mrna}{snps} } = ();
         for my $pos ( sort { $a <=> $b } keys $snps{$seqid} ) {
             push @{ $cds{$seqid}{$mrna}{snps} }, $pos
                 if ($pos >= $mrna_start && $pos <= $mrna_end );
@@ -93,9 +94,10 @@ for my $seqid ( sort keys %cds ) {
             push @aa_changes, "$ref_aa:$alt_aa";
         }
 
-        my $change_count = scalar @aa_changes;
+        my $snp_count = scalar @{ $cds{$seqid}{$mrna}{snps} };
+        my $aa_change_count = scalar @aa_changes;
         my $change_summary = join ",", @aa_changes;
-        say $aa_change_fh join "\t", $mrna, $change_count, $change_summary;
+        say $aa_change_fh join "\t", $mrna, $snp_count, $aa_change_count, $change_summary;
 
     }
     close $aa_change_fh;
