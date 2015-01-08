@@ -4,5 +4,6 @@
 *.bai
 *.gff
 *.gff3
+aa-changes*
 polyDB.*
 repro-archive/
