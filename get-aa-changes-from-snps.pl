@@ -75,7 +75,7 @@ my $pm = new Parallel::ForkManager($threads);
 for my $seqid ( sort keys %cds ) {
     next unless exists $snps{$seqid};
     my $pid = $pm->start and next;
-    open my $aa_change_fh, ">", "$out_dir/aa-changes.SNP-count.$seqid";
+    open my $aa_change_fh, ">", "$out_dir/aa-changes.$seqid";
     say $aa_change_fh join "\t", qw(gene length par1_coverage par2_coverage snp_count aa_substitution_count aa_substitutions);
     for my $mrna ( sort keys %{ $cds{$seqid} } ) {
         my $mrna_start = $cds{$seqid}{$mrna}{cds}->[0]->{start};
