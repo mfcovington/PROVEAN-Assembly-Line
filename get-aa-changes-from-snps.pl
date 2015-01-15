@@ -17,8 +17,8 @@ use Getopt::Long;
 my $gff_file = "ITAG2.3_gene_models.gff3";
 my $fa_file = "S_lycopersicum_chromosomes.2.40.fa";
 
-my $par1 = 'M82_n05';
-my $par2 = 'PEN';
+my $par1_id = 'M82_n05';
+my $par2_id = 'PEN';
 
 my $par1_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_M82_n05-Slyc.sorted.dupl_rm.bam";
 my $par2_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_PEN-Slyc.sorted.dupl_rm.bam";
@@ -27,8 +27,8 @@ my $threads = 3;
 my $options = GetOptions(
     "gff_file=s"      => \$gff_file,
     "fa_file=s"       => \$fa_file,
-    "par1=s"          => \$par1,
-    "par2=s"          => \$par2,
+    "par1_id=s"       => \$par1_id,
+    "par2_id=s"       => \$par2_id,
     "par1_bam_file=s" => \$par1_bam_file,
     "par2_bam_file=s" => \$par2_bam_file,
     "threads=i"       => \$threads,
@@ -59,8 +59,8 @@ for my $snp_file (@snp_file_list) {
         my ( $seqid, $pos, $ref, $alt, $alt_parent ) = split /\t/;
         next if $ref =~ /INS/;
         next if $alt =~ /del/;
-        $snps{$seqid}{$pos}{par1} = $alt_parent eq $par1 ? $alt : $ref;
-        $snps{$seqid}{$pos}{par2} = $alt_parent eq $par2 ? $alt : $ref;
+        $snps{$seqid}{$pos}{par1} = $alt_parent eq $par1_id ? $alt : $ref;
+        $snps{$seqid}{$pos}{par2} = $alt_parent eq $par2_id ? $alt : $ref;
     }
     close $snp_fh;
 
@@ -141,11 +141,11 @@ sub get_seq {
     # say $par1_seq;
     my $par2_seq = $par1_seq;
     for my $pos (@{$mrna_snps}) {
-        my $par1 = $$chr_snps{$pos}{par1};
-        my $par2 = $$chr_snps{$pos}{par2};
-        my $offset = $pos - $start;
-        substr $par1_seq, $offset, 1, $par1;
-        substr $par2_seq, $offset, 1, $par2;
+        my $par1_id = $$chr_snps{$pos}{par1};
+        my $par2_id = $$chr_snps{$pos}{par2};
+        my $offset  = $pos - $start;
+        substr $par1_seq, $offset, 1, $par1_id;
+        substr $par2_seq, $offset, 1, $par2_id;
     }
     return $par1_seq, $par2_seq;
 }
