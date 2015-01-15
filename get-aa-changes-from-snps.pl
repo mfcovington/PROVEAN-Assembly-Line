@@ -11,6 +11,7 @@ use autodie;
 use feature 'say';
 use Parallel::ForkManager;
 use Capture::Tiny 'capture_stderr';
+use File::Path 'make_path';
 use Getopt::Long;
 
 
@@ -24,6 +25,7 @@ my $par1_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_M82_n05-Slyc.sorted
 my $par2_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_PEN-Slyc.sorted.dupl_rm.bam";
 
 my $threads = 3;
+my $out_dir = ".";
 my $options = GetOptions(
     "gff_file=s"      => \$gff_file,
     "fa_file=s"       => \$fa_file,
@@ -32,6 +34,7 @@ my $options = GetOptions(
     "par1_bam_file=s" => \$par1_bam_file,
     "par2_bam_file=s" => \$par2_bam_file,
     "threads=i"       => \$threads,
+    "out_dir=s"       => \$out_dir,
 );
 
 my @snp_file_list = @ARGV;
@@ -66,11 +69,13 @@ for my $snp_file (@snp_file_list) {
 
 }
 
+make_path $out_dir;
+
 my $pm = new Parallel::ForkManager($threads);
 for my $seqid ( sort keys %cds ) {
     next unless exists $snps{$seqid};
     my $pid = $pm->start and next;
-    open my $aa_change_fh, ">", "aa-changes.SNP-count.$seqid";
+    open my $aa_change_fh, ">", "$out_dir/aa-changes.SNP-count.$seqid";
     say $aa_change_fh join "\t", qw(gene length par1_coverage par2_coverage snp_count aa_substitution_count aa_substitutions);
     for my $mrna ( sort keys %{ $cds{$seqid} } ) {
         my $mrna_start = $cds{$seqid}{$mrna}{cds}->[0]->{start};
