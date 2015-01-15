@@ -11,14 +11,30 @@ use autodie;
 use feature 'say';
 use Parallel::ForkManager;
 use Capture::Tiny 'capture_stderr';
+use Getopt::Long;
 
-my $threads = 3;
 
 my $gff_file = "ITAG2.3_gene_models.gff3";
-my @snp_file_list = @ARGV;
 my $fa_file = "S_lycopersicum_chromosomes.2.40.fa";
+
+my $par1 = 'M82_n05';
+my $par2 = 'PEN';
+
 my $par1_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_M82_n05-Slyc.sorted.dupl_rm.bam";
 my $par2_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_PEN-Slyc.sorted.dupl_rm.bam";
+
+my $threads = 3;
+my $options = GetOptions(
+    "gff_file=s"      => \$gff_file,
+    "fa_file=s"       => \$fa_file,
+    "par1=s"          => \$par1,
+    "par2=s"          => \$par2,
+    "par1_bam_file=s" => \$par1_bam_file,
+    "par2_bam_file=s" => \$par2_bam_file,
+    "threads=i"       => \$threads,
+);
+
+my @snp_file_list = @ARGV;
 
 my %cds;
 open my $gff_fh, "<", $gff_file;
@@ -34,8 +50,6 @@ while (<$gff_fh>) {
 close $gff_fh;
 
 
-my $par1 = 'M82_n05';
-my $par2 = 'PEN';
 my %snps;
 for my $snp_file (@snp_file_list) {
 
