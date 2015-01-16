@@ -80,23 +80,7 @@ for my $seqid ( sort keys %cds ) {
     my $pid = $pm->start and next;
 
     open my $aa_change_fh, ">", "$out_dir/aa-changes.$seqid";
-    my @header;
-    if ($coverage) {
-        @header = (
-            'gene',          'length',
-            'par1_coverage', 'par2_coverage',
-            'snp_count',     'aa_substitution_count',
-            'aa_substitutions'
-        );
-    }
-    else {
-        @header = (
-            'gene',      'length',
-            'snp_count', 'aa_substitution_count',
-            'aa_substitutions'
-        );
-    }
-    say $aa_change_fh join "\t", @header;
+    write_header( $aa_change_fh, $coverage );
 
     for my $mrna ( sort keys %{ $cds{$seqid} } ) {
         my $mrna_start = $cds{$seqid}{$mrna}{cds}->[0]->{start};
@@ -177,6 +161,30 @@ for my $seqid ( sort keys %cds ) {
     $pm->finish;
 }
 $pm->wait_all_children;
+
+exit;
+
+sub write_header {
+    my ( $aa_change_fh, $coverage ) = @_;
+
+    my @header;
+    if ($coverage) {
+        @header = (
+            'gene',          'length',
+            'par1_coverage', 'par2_coverage',
+            'snp_count',     'aa_substitution_count',
+            'aa_substitutions'
+        );
+    }
+    else {
+        @header = (
+            'gene',      'length',
+            'snp_count', 'aa_substitution_count',
+            'aa_substitutions'
+        );
+    }
+    say $aa_change_fh join "\t", @header;
+}
 
 sub get_seq {
     my ( $fa_file, $seqid, $start, $end, $mrna_snps, $chr_snps ) = @_;
