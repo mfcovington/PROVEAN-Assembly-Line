@@ -65,38 +65,17 @@ for my $seqid ( sort keys %$genes ) {
             $$genes{$seqid}{$mrna}{snps},
             $$snps{$seqid} );
 
-        my $par1_spliced = '';
-        my $par2_spliced = '';
-        my $total_cds_length;
-        my $total_cds_coverage;
-        %$total_cds_coverage = ( par1 => 0, par2 => 0 ) if $coverage;
-        for my $cds ( @{ $$genes{$seqid}{$mrna}{cds} } ) {
-            my $cds_start = $cds->{start};
-            my $cds_end   = $cds->{end};
-
-            if ($coverage) {
-                my ( $par1_cds_cov, $par2_cds_cov )
-                    = get_coverage( $seqid, $cds_start, $cds_end, $fa_file,
-                    $par1_bam_file, $par2_bam_file );
-                $$total_cds_coverage{par1} += $par1_cds_cov;
-                $$total_cds_coverage{par2} += $par2_cds_cov;
-            }
-
-            $total_cds_length += $cds_end - $cds_start + 1;
-
-            my $offset = $cds_start - $mrna_start;
-            my $length = $cds_end - $cds_start + 1;
-            $par1_spliced .= substr $par1_seq, $offset, $length;
-            $par2_spliced .= substr $par2_seq, $offset, $length;
-        }
+        my ( $par1_cds, $par2_cds, $total_cds_length, $total_cds_coverage )
+            = splice_exons( $par1_seq, $par2_seq, $genes, $seqid, $mrna,
+            $mrna_start, $coverage );
 
         if ( $$genes{$seqid}{$mrna}{strand} eq '-' ) {
-            reverse_complement( \$par1_spliced );
-            reverse_complement( \$par2_spliced );
+            reverse_complement( \$par1_cds );
+            reverse_complement( \$par2_cds );
         }
 
-        my $ref_protein = translate($par1_spliced);
-        my $alt_protein = translate($par2_spliced);
+        my $ref_protein = translate($par1_cds);
+        my $alt_protein = translate($par2_cds);
 
         my $aa_changes = get_aa_changes( $ref_protein, $alt_protein );
 
@@ -249,6 +228,39 @@ sub get_seq {
     }
 
     return $par1_seq, $par2_seq;
+}
+
+sub splice_exons {
+    my ( $par1_seq, $par2_seq, $genes, $seqid, $mrna, $mrna_start, $coverage )
+        = @_;
+
+    my $par1_cds = '';
+    my $par2_cds = '';
+
+    my $total_cds_coverage;
+    %$total_cds_coverage = ( par1 => 0, par2 => 0 ) if $coverage;
+
+    for my $cds ( @{ $$genes{$seqid}{$mrna}{cds} } ) {
+        my $cds_start = $cds->{start};
+        my $cds_end   = $cds->{end};
+
+        if ($coverage) {
+            my ( $par1_cds_cov, $par2_cds_cov )
+                = get_coverage( $seqid, $cds_start, $cds_end, $fa_file,
+                $par1_bam_file, $par2_bam_file );
+            $$total_cds_coverage{par1} += $par1_cds_cov;
+            $$total_cds_coverage{par2} += $par2_cds_cov;
+        }
+
+        my $offset = $cds_start - $mrna_start;
+        my $length = $cds_end - $cds_start + 1;
+        $par1_cds .= substr $par1_seq, $offset, $length;
+        $par2_cds .= substr $par2_seq, $offset, $length;
+    }
+
+    my $total_cds_length = length $par1_cds;
+
+    return $par1_cds, $par2_cds, $total_cds_length, $total_cds_coverage;
 }
 
 sub get_cds_snps {
