@@ -99,8 +99,8 @@ for my $seqid ( sort keys %cds ) {
         my $par1_spliced = '';
         my $par2_spliced = '';
         my $total_cds_length;
-        my %total_cds_coverage;
-        %total_cds_coverage = ( par1 => 0, par2 => 0 ) if $coverage;
+        my $total_cds_coverage;
+        %$total_cds_coverage = ( par1 => 0, par2 => 0 ) if $coverage;
         for my $cds (@{$cds{$seqid}{$mrna}{cds}}) {
             my $cds_start = $cds->{start};
             my $cds_end = $cds->{end};
@@ -109,8 +109,8 @@ for my $seqid ( sort keys %cds ) {
                 my ( $par1_cds_cov, $par2_cds_cov )
                     = get_coverage( $seqid, $cds_start, $cds_end, $fa_file,
                     $par1_bam_file, $par2_bam_file );
-                $total_cds_coverage{par1} += $par1_cds_cov;
-                $total_cds_coverage{par2} += $par2_cds_cov;
+                $$total_cds_coverage{par1} += $par1_cds_cov;
+                $$total_cds_coverage{par2} += $par2_cds_cov;
             }
 
             $total_cds_length += $cds_end - $cds_start + 1;
@@ -138,24 +138,9 @@ for my $seqid ( sort keys %cds ) {
         my $aa_change_count = scalar @aa_changes;
         my $change_summary = join ",", @aa_changes;
 
-        my @results;
-        if ($coverage) {
-            my $par1_coverage = sprintf "%.1f",
-                $total_cds_coverage{par1} / $total_cds_length;
-            my $par2_coverage = sprintf "%.1f",
-                $total_cds_coverage{par2} / $total_cds_length;
-            @results = (
-                $mrna, $total_cds_length, $par1_coverage, $par2_coverage,
-                $snp_count, $aa_change_count, $change_summary
-            );
-        }
-        else {
-            @results = (
-                $mrna, $total_cds_length, $snp_count, $aa_change_count,
-                $change_summary
-            );
-        }
-        say $aa_change_fh join "\t", @results;
+        write_result( $aa_change_fh, $total_cds_coverage, $mrna,
+            $total_cds_length, $snp_count, $aa_change_count,
+            $change_summary );
     }
     close $aa_change_fh;
     $pm->finish;
@@ -184,6 +169,31 @@ sub write_header {
         );
     }
     say $aa_change_fh join "\t", @header;
+}
+
+sub write_result {
+    my ( $aa_change_fh, $total_cds_coverage, $mrna, $total_cds_length,
+        $snp_count, $aa_change_count, $change_summary )
+        = @_;
+
+    my @results;
+    if ($coverage) {
+        my $par1_coverage = sprintf "%.1f",
+            $$total_cds_coverage{par1} / $total_cds_length;
+        my $par2_coverage = sprintf "%.1f",
+            $$total_cds_coverage{par2} / $total_cds_length;
+        @results = (
+            $mrna, $total_cds_length, $par1_coverage, $par2_coverage,
+            $snp_count, $aa_change_count, $change_summary
+        );
+    }
+    else {
+        @results = (
+            $mrna, $total_cds_length, $snp_count, $aa_change_count,
+            $change_summary
+        );
+    }
+    say $aa_change_fh join "\t", @results;
 }
 
 sub get_seq {
