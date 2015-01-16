@@ -42,19 +42,7 @@ my $options = GetOptions(
 
 my @snp_file_list = @ARGV;
 
-my %cds;
-open my $gff_fh, "<", $gff_file;
-while (<$gff_fh>) {
-    next if /^#/;
-    chomp; # Columns: seqid source type start end score strand phase attribute
-    my ( $seqid, $type, $start, $end, $strand, $phase, $attribute ) = (split /\t/)[0, 2..4, 6..8];
-    next unless $type =~ /CDS/;
-    my ($mrna) = $attribute =~ /Parent=mRNA:([^;]+);/;
-    $cds{$seqid}{$mrna}{strand} = $strand;
-    push @{$cds{$seqid}{$mrna}{cds}}, {start => $start, end => $end, phase => $phase };
-}
-close $gff_fh;
-
+my $genes = get_gene_models($gff_file);
 
 my %snps;
 for my $snp_file (@snp_file_list) {
@@ -75,25 +63,25 @@ for my $snp_file (@snp_file_list) {
 make_path $out_dir;
 
 my $pm = new Parallel::ForkManager($threads);
-for my $seqid ( sort keys %cds ) {
+for my $seqid ( sort keys %$genes ) {
     next unless exists $snps{$seqid};
     my $pid = $pm->start and next;
 
     open my $aa_change_fh, ">", "$out_dir/aa-changes.$seqid";
     write_header( $aa_change_fh, $coverage );
 
-    for my $mrna ( sort keys %{ $cds{$seqid} } ) {
-        my $mrna_start = $cds{$seqid}{$mrna}{cds}->[0]->{start};
-        my $mrna_end   = $cds{$seqid}{$mrna}{cds}->[-1]->{end};
-        @{ $cds{$seqid}{$mrna}{snps} } = ();
+    for my $mrna ( sort keys %{ $$genes{$seqid} } ) {
+        my $mrna_start = $$genes{$seqid}{$mrna}{cds}->[0]->{start};
+        my $mrna_end   = $$genes{$seqid}{$mrna}{cds}->[-1]->{end};
+        @{ $$genes{$seqid}{$mrna}{snps} } = ();
         for my $pos ( sort { $a <=> $b } keys %{ $snps{$seqid} } ) {
-            push @{ $cds{$seqid}{$mrna}{snps} }, $pos
+            push @{ $$genes{$seqid}{$mrna}{snps} }, $pos
                 if ($pos >= $mrna_start && $pos <= $mrna_end );
         }
 
         my ( $par1_seq, $par2_seq )
             = get_seq( $fa_file, $seqid, $mrna_start, $mrna_end,
-            $cds{$seqid}{$mrna}{snps},
+            $$genes{$seqid}{$mrna}{snps},
             $snps{$seqid} );
 
         my $par1_spliced = '';
@@ -101,9 +89,9 @@ for my $seqid ( sort keys %cds ) {
         my $total_cds_length;
         my $total_cds_coverage;
         %$total_cds_coverage = ( par1 => 0, par2 => 0 ) if $coverage;
-        for my $cds (@{$cds{$seqid}{$mrna}{cds}}) {
+        for my $cds ( @{ $$genes{$seqid}{$mrna}{cds} } ) {
             my $cds_start = $cds->{start};
-            my $cds_end = $cds->{end};
+            my $cds_end   = $cds->{end};
 
             if ($coverage) {
                 my ( $par1_cds_cov, $par2_cds_cov )
@@ -118,7 +106,7 @@ for my $seqid ( sort keys %cds ) {
             $par2_spliced .= substr $par2_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
         }
 
-        if ( $cds{$seqid}{$mrna}{strand} eq '-' ) {
+        if ( $$genes{$seqid}{$mrna}{strand} eq '-' ) {
             reverse_complement( \$par1_spliced );
             reverse_complement( \$par2_spliced );
         }
@@ -134,7 +122,7 @@ for my $seqid ( sort keys %cds ) {
             push @aa_changes, "$ref_aa:$alt_aa";
         }
 
-        my $snp_count = scalar @{ $cds{$seqid}{$mrna}{snps} };
+        my $snp_count = scalar @{ $$genes{$seqid}{$mrna}{snps} };
         my $aa_change_count = scalar @aa_changes;
         my $change_summary = join ",", @aa_changes;
 
@@ -148,6 +136,25 @@ for my $seqid ( sort keys %cds ) {
 $pm->wait_all_children;
 
 exit;
+
+sub get_gene_models {
+    my $gff_file = shift;
+
+    my %genes;
+    open my $gff_fh, "<", $gff_file;
+    while (<$gff_fh>) {
+        next if /^#/;
+        chomp; # Columns: seqid source type start end score strand phase attribute
+        my ( $seqid, $type, $start, $end, $strand, $phase, $attribute ) = (split /\t/)[0, 2..4, 6..8];
+        next unless $type =~ /CDS/;
+        my ($mrna) = $attribute =~ /Parent=mRNA:([^;]+);/;
+        $genes{$seqid}{$mrna}{strand} = $strand;
+        push @{$genes{$seqid}{$mrna}{cds}}, {start => $start, end => $end, phase => $phase };
+    }
+    close $gff_fh;
+
+    return \%genes;
+}
 
 sub write_header {
     my ( $aa_change_fh, $coverage ) = @_;
