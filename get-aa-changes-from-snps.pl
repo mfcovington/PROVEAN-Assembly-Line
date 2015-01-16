@@ -74,10 +74,10 @@ for my $seqid ( sort keys %$genes ) {
             reverse_complement( \$par2_cds );
         }
 
-        my $ref_protein = translate($par1_cds);
-        my $alt_protein = translate($par2_cds);
+        my $par1_protein = translate($par1_cds);
+        my $par2_protein = translate($par2_cds);
 
-        my $aa_changes = get_aa_changes( $ref_protein, $alt_protein );
+        my $aa_changes = get_aa_changes( $par1_protein, $par2_protein );
 
         my $snp_count       = scalar @{ $$genes{$seqid}{$mrna}{snps} };
         my $aa_change_count = scalar @$aa_changes;
@@ -312,16 +312,16 @@ sub codon_table {
 }
 
 sub get_aa_changes {
-    my ( $ref_protein, $alt_protein ) = @_;
+    my ( $par1_protein, $par2_protein ) = @_;
 
     my @aa_changes = ();
-    for my $idx ( 0 .. length($ref_protein) - 1 ) {
-        my $ref_aa = substr $ref_protein, $idx, 1;
-        my $alt_aa = substr $alt_protein, $idx, 1;
-        next if $ref_aa eq $alt_aa;
+    for my $idx ( 0 .. length($par1_protein) - 1 ) {
+        my $par1_aa = substr $par1_protein, $idx, 1;
+        my $par2_aa = substr $par2_protein, $idx, 1;
+        next if $par1_aa eq $par2_aa;
 
         my $pos = $idx + 1;
-        push @aa_changes, "$ref_aa$pos$alt_aa";
+        push @aa_changes, "$par1_aa$pos$par2_aa";
     }
 
     return \@aa_changes;
