@@ -38,7 +38,8 @@ my $options = GetOptions(
 
 my @snp_file_list = @ARGV;
 
-validate_options( $coverage, $par1_bam_file, $par2_bam_file );
+validate_options( $coverage, $par1_bam_file, $par2_bam_file,
+    \@snp_file_list );
 
 my $genes = get_gene_models($gff_file);
 
@@ -136,13 +137,15 @@ $pm->wait_all_children;
 exit;
 
 sub validate_options {
-    my ( $coverage, $par1_bam_file, $par2_bam_file ) = @_;
+    my ( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list ) = @_;
 
     if ($coverage) {
         die
             "ERROR: --par1_bam_file and --par2_bam_file must be specified when using --coverage\n"
             unless defined $par1_bam_file && defined $par2_bam_file;
     }
+
+    die "ERROR: No SNP file(s) specified\n" if scalar @$snp_file_list == 0;
 }
 
 sub get_gene_models {
