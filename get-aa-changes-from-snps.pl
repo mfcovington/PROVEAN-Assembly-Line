@@ -38,11 +38,10 @@ my $options = GetOptions(
 
 my $snp_file_list = [@ARGV];
 
-validate_options( $coverage, $par1_bam_file, $par2_bam_file,
-    $snp_file_list );
+validate_options( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list );
 
 my $genes = get_gene_models($gff_file);
-my $snps  = get_snps( $snp_file_list, $par1_id, $par2_id );
+my $snps = get_snps( $snp_file_list, $par1_id, $par2_id );
 
 make_path $out_dir;
 
@@ -60,7 +59,7 @@ for my $seqid ( sort keys %$genes ) {
         @{ $$genes{$seqid}{$mrna}{snps} } = ();
         for my $pos ( sort { $a <=> $b } keys %{ $$snps{$seqid} } ) {
             push @{ $$genes{$seqid}{$mrna}{snps} }, $pos
-                if ($pos >= $mrna_start && $pos <= $mrna_end );
+                if ( $pos >= $mrna_start && $pos <= $mrna_end );
         }
 
         my ( $par1_seq, $par2_seq )
@@ -86,8 +85,11 @@ for my $seqid ( sort keys %$genes ) {
             }
 
             $total_cds_length += $cds_end - $cds_start + 1;
-            $par1_spliced .= substr $par1_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
-            $par2_spliced .= substr $par2_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
+
+            my $offset = $cds_start - $mrna_start;
+            my $length = $cds_end - $cds_start + 1;
+            $par1_spliced .= substr $par1_seq, $offset, $length;
+            $par2_spliced .= substr $par2_seq, $offset, $length;
         }
 
         if ( $$genes{$seqid}{$mrna}{strand} eq '-' ) {
@@ -99,16 +101,16 @@ for my $seqid ( sort keys %$genes ) {
         my $alt_protein = translate($par2_spliced);
 
         my @aa_changes = ();
-        for my $idx (0 .. length($ref_protein) - 1) {
+        for my $idx ( 0 .. length($ref_protein) - 1 ) {
             my $ref_aa = substr $ref_protein, $idx, 1;
             my $alt_aa = substr $alt_protein, $idx, 1;
             next if $ref_aa eq $alt_aa;
             push @aa_changes, "$ref_aa:$alt_aa";
         }
 
-        my $snp_count = scalar @{ $$genes{$seqid}{$mrna}{snps} };
+        my $snp_count       = scalar @{ $$genes{$seqid}{$mrna}{snps} };
         my $aa_change_count = scalar @aa_changes;
-        my $change_summary = join ",", @aa_changes;
+        my $change_summary  = join ",", @aa_changes;
 
         write_result( $aa_change_fh, $total_cds_coverage, $mrna,
             $total_cds_length, $snp_count, $aa_change_count,
@@ -140,12 +142,20 @@ sub get_gene_models {
     open my $gff_fh, "<", $gff_file;
     while (<$gff_fh>) {
         next if /^#/;
-        chomp; # Columns: seqid source type start end score strand phase attribute
-        my ( $seqid, $type, $start, $end, $strand, $phase, $attribute ) = (split /\t/)[0, 2..4, 6..8];
+        chomp;
+
+        # GFF Columns:
+        # 0:seqid 1:source 2:type 3:start 4:end
+        # 5:score 6:strand 7:phase 8:attribute
+        my ( $seqid, $type, $start, $end, $strand, $phase, $attribute )
+            = ( split /\t/ )[ 0, 2 .. 4, 6 .. 8 ];
+
         next unless $type =~ /CDS/;
+
         my ($mrna) = $attribute =~ /Parent=mRNA:([^;]+);/;
         $genes{$seqid}{$mrna}{strand} = $strand;
-        push @{$genes{$seqid}{$mrna}{cds}}, {start => $start, end => $end, phase => $phase };
+        push @{ $genes{$seqid}{$mrna}{cds} },
+            { start => $start, end => $end, phase => $phase };
     }
     close $gff_fh;
 
@@ -221,18 +231,21 @@ sub write_result {
 
 sub get_seq {
     my ( $fa_file, $seqid, $start, $end, $mrna_snps, $chr_snps ) = @_;
+
     my ( $header, @seq ) = `samtools faidx $fa_file $seqid:$start-$end`;
     chomp @seq;
+
     my $par1_seq = join "", @seq;
-    # say $par1_seq;
     my $par2_seq = $par1_seq;
-    for my $pos (@{$mrna_snps}) {
-        my $par1_id = $$chr_snps{$pos}{par1};
-        my $par2_id = $$chr_snps{$pos}{par2};
+
+    for my $pos ( @{$mrna_snps} ) {
+        my $par1_allele = $$chr_snps{$pos}{par1};
+        my $par2_allele = $$chr_snps{$pos}{par2};
         my $offset  = $pos - $start;
-        substr $par1_seq, $offset, 1, $par1_id;
-        substr $par2_seq, $offset, 1, $par2_id;
+        substr $par1_seq, $offset, 1, $par1_allele;
+        substr $par2_seq, $offset, 1, $par2_allele;
     }
+
     return $par1_seq, $par2_seq;
 }
 
@@ -248,7 +261,7 @@ sub reverse_complement {    # Assumes no ambiguous codes
 }
 
 sub translate {
-    my ( $nt_seq ) = @_;
+    my $nt_seq = shift;
     my $codon_table = codon_table();
 
     $nt_seq =~ tr/acgt/ACGT/;
@@ -290,25 +303,27 @@ sub codon_table {
 }
 
 sub get_coverage {
-    my ( $seqid, $start, $end, $fa_file, $par1_bam_file, $par2_bam_file ) = @_;
-    my $mpileup_cmd = "samtools mpileup -A -r $seqid:$start-$end -f $fa_file $par1_bam_file $par2_bam_file";
+    my ( $seqid, $start, $end, $fa_file, $par1_bam_file, $par2_bam_file )
+        = @_;
+    my $mpileup_cmd
+        = "samtools mpileup -A -r $seqid:$start-$end -f $fa_file $par1_bam_file $par2_bam_file";
 
     my $mpileup_fh;
     capture_stderr {    # suppress mpileup output sent to stderr
-        open $mpileup_fh,   "-|", $mpileup_cmd;
+        open $mpileup_fh, "-|", $mpileup_cmd;
     };
     my $par1_coverage = 0;
     my $par2_coverage = 0;
     while ( my $mpileup_line = <$mpileup_fh> ) {
-# print $mpileup_line;
-        my ( $par1_cov_with_gaps, $par1_read_bases, $par2_cov_with_gaps, $par2_read_bases ) = (split /\t/, $mpileup_line)[3,4,6,7];
+        my ($par1_cov_with_gaps, $par1_read_bases,
+            $par2_cov_with_gaps, $par2_read_bases
+        ) = ( split /\t/, $mpileup_line )[ 3, 4, 6, 7 ];
 
         # nogap coverage == gap coverage minus # of ref skips
         $par1_coverage += $par1_cov_with_gaps;
         $par2_coverage += $par2_cov_with_gaps;
         $par1_coverage-- for $par1_read_bases =~ m/(?<!\^)[<>]/g;
         $par2_coverage-- for $par2_read_bases =~ m/(?<!\^)[<>]/g;
-# say $coverage;
     }
     close $mpileup_fh;
     return $par1_coverage, $par2_coverage;
