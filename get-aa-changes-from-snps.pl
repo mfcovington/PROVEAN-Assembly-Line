@@ -36,34 +36,19 @@ my $options = GetOptions(
     "coverage"        => \$coverage,
 );
 
-my @snp_file_list = @ARGV;
+my $snp_file_list = [@ARGV];
 
 validate_options( $coverage, $par1_bam_file, $par2_bam_file,
-    \@snp_file_list );
+    $snp_file_list );
 
 my $genes = get_gene_models($gff_file);
-
-my %snps;
-for my $snp_file (@snp_file_list) {
-
-    open my $snp_fh, "<", $snp_file;
-    <$snp_fh>;
-    while (<$snp_fh>) {
-        my ( $seqid, $pos, $ref, $alt, $alt_parent ) = split /\t/;
-        next if $ref =~ /INS/;
-        next if $alt =~ /del/;
-        $snps{$seqid}{$pos}{par1} = $alt_parent eq $par1_id ? $alt : $ref;
-        $snps{$seqid}{$pos}{par2} = $alt_parent eq $par2_id ? $alt : $ref;
-    }
-    close $snp_fh;
-
-}
+my $snps  = get_snps( $snp_file_list, $par1_id, $par2_id );
 
 make_path $out_dir;
 
 my $pm = new Parallel::ForkManager($threads);
 for my $seqid ( sort keys %$genes ) {
-    next unless exists $snps{$seqid};
+    next unless exists $$snps{$seqid};
     my $pid = $pm->start and next;
 
     open my $aa_change_fh, ">", "$out_dir/aa-changes.$seqid";
@@ -73,7 +58,7 @@ for my $seqid ( sort keys %$genes ) {
         my $mrna_start = $$genes{$seqid}{$mrna}{cds}->[0]->{start};
         my $mrna_end   = $$genes{$seqid}{$mrna}{cds}->[-1]->{end};
         @{ $$genes{$seqid}{$mrna}{snps} } = ();
-        for my $pos ( sort { $a <=> $b } keys %{ $snps{$seqid} } ) {
+        for my $pos ( sort { $a <=> $b } keys %{ $$snps{$seqid} } ) {
             push @{ $$genes{$seqid}{$mrna}{snps} }, $pos
                 if ($pos >= $mrna_start && $pos <= $mrna_end );
         }
@@ -81,7 +66,7 @@ for my $seqid ( sort keys %$genes ) {
         my ( $par1_seq, $par2_seq )
             = get_seq( $fa_file, $seqid, $mrna_start, $mrna_end,
             $$genes{$seqid}{$mrna}{snps},
-            $snps{$seqid} );
+            $$snps{$seqid} );
 
         my $par1_spliced = '';
         my $par2_spliced = '';
@@ -165,6 +150,26 @@ sub get_gene_models {
     close $gff_fh;
 
     return \%genes;
+}
+
+sub get_snps {
+    my ( $snp_file_list, $par1_id, $par2_id ) = @_;
+
+    my %snps;
+    for my $snp_file (@$snp_file_list) {
+        open my $snp_fh, "<", $snp_file;
+        <$snp_fh>;
+        while (<$snp_fh>) {
+            my ( $seqid, $pos, $ref, $alt, $alt_parent ) = split /\t/;
+            next if $ref =~ /INS/;
+            next if $alt =~ /del/;
+            $snps{$seqid}{$pos}{par1} = $alt_parent eq $par1_id ? $alt : $ref;
+            $snps{$seqid}{$pos}{par2} = $alt_parent eq $par2_id ? $alt : $ref;
+        }
+        close $snp_fh;
+    }
+
+    return \%snps;
 }
 
 sub write_header {
