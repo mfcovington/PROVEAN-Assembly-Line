@@ -26,6 +26,8 @@ my $par2_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_PEN-Slyc.sorted.dup
 
 my $threads = 3;
 my $out_dir = ".";
+my $coverage;
+
 my $options = GetOptions(
     "gff_file=s"      => \$gff_file,
     "fa_file=s"       => \$fa_file,
@@ -35,6 +37,7 @@ my $options = GetOptions(
     "par2_bam_file=s" => \$par2_bam_file,
     "threads=i"       => \$threads,
     "out_dir=s"       => \$out_dir,
+    "coverage"        => \$coverage,
 );
 
 my @snp_file_list = @ARGV;
@@ -75,8 +78,26 @@ my $pm = new Parallel::ForkManager($threads);
 for my $seqid ( sort keys %cds ) {
     next unless exists $snps{$seqid};
     my $pid = $pm->start and next;
+
     open my $aa_change_fh, ">", "$out_dir/aa-changes.$seqid";
-    say $aa_change_fh join "\t", qw(gene length par1_coverage par2_coverage snp_count aa_substitution_count aa_substitutions);
+    my @header;
+    if ($coverage) {
+        @header = (
+            'gene',          'length',
+            'par1_coverage', 'par2_coverage',
+            'snp_count',     'aa_substitution_count',
+            'aa_substitutions'
+        );
+    }
+    else {
+        @header = (
+            'gene',      'length',
+            'snp_count', 'aa_substitution_count',
+            'aa_substitutions'
+        );
+    }
+    say $aa_change_fh join "\t", @header;
+
     for my $mrna ( sort keys %{ $cds{$seqid} } ) {
         my $mrna_start = $cds{$seqid}{$mrna}{cds}->[0]->{start};
         my $mrna_end   = $cds{$seqid}{$mrna}{cds}->[-1]->{end};
@@ -94,16 +115,20 @@ for my $seqid ( sort keys %cds ) {
         my $par1_spliced = '';
         my $par2_spliced = '';
         my $total_cds_length;
-        my %total_cds_coverage = ( par1 => 0, par2 => 0 );
+        my %total_cds_coverage;
+        %total_cds_coverage = ( par1 => 0, par2 => 0 ) if $coverage;
         for my $cds (@{$cds{$seqid}{$mrna}{cds}}) {
             my $cds_start = $cds->{start};
             my $cds_end = $cds->{end};
 
-            my ( $par1_cds_cov, $par2_cds_cov )
-                = get_coverage( $seqid, $cds_start, $cds_end, $fa_file,
-                $par1_bam_file, $par2_bam_file );
-            $total_cds_coverage{par1} += $par1_cds_cov;
-            $total_cds_coverage{par2} += $par2_cds_cov;
+            if ($coverage) {
+                my ( $par1_cds_cov, $par2_cds_cov )
+                    = get_coverage( $seqid, $cds_start, $cds_end, $fa_file,
+                    $par1_bam_file, $par2_bam_file );
+                $total_cds_coverage{par1} += $par1_cds_cov;
+                $total_cds_coverage{par2} += $par2_cds_cov;
+            }
+
             $total_cds_length += $cds_end - $cds_start + 1;
             $par1_spliced .= substr $par1_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
             $par2_spliced .= substr $par2_seq, $cds_start - $mrna_start, $cds_end - $cds_start + 1;
@@ -128,10 +153,25 @@ for my $seqid ( sort keys %cds ) {
         my $snp_count = scalar @{ $cds{$seqid}{$mrna}{snps} };
         my $aa_change_count = scalar @aa_changes;
         my $change_summary = join ",", @aa_changes;
-        my $par1_coverage = sprintf "%.1f", $total_cds_coverage{par1} / $total_cds_length;
-        my $par2_coverage = sprintf "%.1f", $total_cds_coverage{par2} / $total_cds_length;
-        say $aa_change_fh join "\t", $mrna, $total_cds_length, $par1_coverage,
-            $par2_coverage, $snp_count, $aa_change_count, $change_summary;
+
+        my @results;
+        if ($coverage) {
+            my $par1_coverage = sprintf "%.1f",
+                $total_cds_coverage{par1} / $total_cds_length;
+            my $par2_coverage = sprintf "%.1f",
+                $total_cds_coverage{par2} / $total_cds_length;
+            @results = (
+                $mrna, $total_cds_length, $par1_coverage, $par2_coverage,
+                $snp_count, $aa_change_count, $change_summary
+            );
+        }
+        else {
+            @results = (
+                $mrna, $total_cds_length, $snp_count, $aa_change_count,
+                $change_summary
+            );
+        }
+        say $aa_change_fh join "\t", @results;
     }
     close $aa_change_fh;
     $pm->finish;
