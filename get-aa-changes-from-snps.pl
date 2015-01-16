@@ -263,11 +263,6 @@ sub splice_exons {
     return $par1_cds, $par2_cds, $total_cds_length, $total_cds_coverage;
 }
 
-sub get_cds_snps {
-    my ( $cds_start, $cds_end, $mrna_snps ) = @_;
-    return grep { $_ >= $cds_start && $_ <= $cds_end } @$mrna_snps;
-}
-
 sub reverse_complement {    # Assumes no ambiguous codes
     my $seq = shift;
     $$seq = reverse $$seq;
