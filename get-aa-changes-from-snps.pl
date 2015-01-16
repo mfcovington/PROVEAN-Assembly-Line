@@ -15,18 +15,14 @@ use File::Path 'make_path';
 use Getopt::Long;
 
 
+my ( $coverage, $par1_bam_file, $par2_bam_file );
+
 my $gff_file = "ITAG2.3_gene_models.gff3";
-my $fa_file = "S_lycopersicum_chromosomes.2.40.fa";
-
-my $par1_id = 'M82_n05';
-my $par2_id = 'PEN';
-
-my $par1_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_M82_n05-Slyc.sorted.dupl_rm.bam";
-my $par2_bam_file = "~/git.repos/sample-files/bam/bwa_tophat_PEN-Slyc.sorted.dupl_rm.bam";
-
-my $threads = 3;
-my $out_dir = ".";
-my $coverage;
+my $fa_file  = "S_lycopersicum_chromosomes.2.40.fa";
+my $par1_id  = 'M82_n05';
+my $par2_id  = 'PEN';
+my $threads  = 3;
+my $out_dir  = ".";
 
 my $options = GetOptions(
     "gff_file=s"      => \$gff_file,
@@ -41,6 +37,8 @@ my $options = GetOptions(
 );
 
 my @snp_file_list = @ARGV;
+
+validate_options( $coverage, $par1_bam_file, $par2_bam_file );
 
 my $genes = get_gene_models($gff_file);
 
@@ -136,6 +134,16 @@ for my $seqid ( sort keys %$genes ) {
 $pm->wait_all_children;
 
 exit;
+
+sub validate_options {
+    my ( $coverage, $par1_bam_file, $par2_bam_file ) = @_;
+
+    if ($coverage) {
+        die
+            "ERROR: --par1_bam_file and --par2_bam_file must be specified when using --coverage\n"
+            unless defined $par1_bam_file && defined $par2_bam_file;
+    }
+}
 
 sub get_gene_models {
     my $gff_file = shift;
