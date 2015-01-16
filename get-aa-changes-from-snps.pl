@@ -319,7 +319,9 @@ sub get_aa_changes {
         my $ref_aa = substr $ref_protein, $idx, 1;
         my $alt_aa = substr $alt_protein, $idx, 1;
         next if $ref_aa eq $alt_aa;
-        push @aa_changes, "$ref_aa:$alt_aa";
+
+        my $pos = $idx + 1;
+        push @aa_changes, "$ref_aa$pos$alt_aa";
     }
 
     return \@aa_changes;
