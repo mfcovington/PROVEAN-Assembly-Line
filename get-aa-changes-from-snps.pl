@@ -100,17 +100,11 @@ for my $seqid ( sort keys %$genes ) {
         my $ref_protein = translate($par1_spliced);
         my $alt_protein = translate($par2_spliced);
 
-        my @aa_changes = ();
-        for my $idx ( 0 .. length($ref_protein) - 1 ) {
-            my $ref_aa = substr $ref_protein, $idx, 1;
-            my $alt_aa = substr $alt_protein, $idx, 1;
-            next if $ref_aa eq $alt_aa;
-            push @aa_changes, "$ref_aa:$alt_aa";
-        }
+        my $aa_changes = get_aa_changes( $ref_protein, $alt_protein );
 
         my $snp_count       = scalar @{ $$genes{$seqid}{$mrna}{snps} };
-        my $aa_change_count = scalar @aa_changes;
-        my $change_summary  = join ",", @aa_changes;
+        my $aa_change_count = scalar @$aa_changes;
+        my $change_summary  = join ",", @$aa_changes;
 
         write_result( $aa_change_fh, $total_cds_coverage, $mrna,
             $total_cds_length, $snp_count, $aa_change_count,
@@ -300,6 +294,20 @@ sub codon_table {
         GTA => 'V', GCA => 'A', GAA => 'E', GGA => 'G',
         GTG => 'V', GCG => 'A', GAG => 'E', GGG => 'G',
     };
+}
+
+sub get_aa_changes {
+    my ( $ref_protein, $alt_protein ) = @_;
+
+    my @aa_changes = ();
+    for my $idx ( 0 .. length($ref_protein) - 1 ) {
+        my $ref_aa = substr $ref_protein, $idx, 1;
+        my $alt_aa = substr $alt_protein, $idx, 1;
+        next if $ref_aa eq $alt_aa;
+        push @aa_changes, "$ref_aa:$alt_aa";
+    }
+
+    return \@aa_changes;
 }
 
 sub get_coverage {
