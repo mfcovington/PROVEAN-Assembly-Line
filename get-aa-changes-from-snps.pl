@@ -56,11 +56,9 @@ for my $seqid ( sort keys %$genes ) {
     for my $mrna ( sort keys %{ $$genes{$seqid} } ) {
         my $mrna_start = $$genes{$seqid}{$mrna}{cds}->[0]->{start};
         my $mrna_end   = $$genes{$seqid}{$mrna}{cds}->[-1]->{end};
-        @{ $$genes{$seqid}{$mrna}{snps} } = ();
-        for my $pos ( sort { $a <=> $b } keys %{ $$snps{$seqid} } ) {
-            push @{ $$genes{$seqid}{$mrna}{snps} }, $pos
-                if ( $pos >= $mrna_start && $pos <= $mrna_end );
-        }
+
+        filter_snps_by_gene( $snps, $genes, $seqid, $mrna, $mrna_start,
+            $mrna_end );
 
         my ( $par1_seq, $par2_seq )
             = get_seq( $fa_file, $seqid, $mrna_start, $mrna_end,
@@ -221,6 +219,16 @@ sub write_result {
         );
     }
     say $aa_change_fh join "\t", @results;
+}
+
+sub filter_snps_by_gene {
+    my ( $snps, $genes, $seqid, $mrna, $mrna_start, $mrna_end ) = @_;
+
+    @{ $$genes{$seqid}{$mrna}{snps} } = ();
+    for my $pos ( sort { $a <=> $b } keys %{ $$snps{$seqid} } ) {
+        push @{ $$genes{$seqid}{$mrna}{snps} }, $pos
+            if ( $pos >= $mrna_start && $pos <= $mrna_end );
+    }
 }
 
 sub get_seq {
