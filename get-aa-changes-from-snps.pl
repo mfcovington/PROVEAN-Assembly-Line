@@ -14,8 +14,7 @@ use Capture::Tiny 'capture_stderr';
 use File::Path 'make_path';
 use Getopt::Long;
 
-
-my ( $coverage, $par1_bam_file, $par2_bam_file );
+my ( $coverage, $par1_bam_file, $par2_bam_file, $ref_vs_alt );
 
 my $gff_file = "ITAG2.3_gene_models.gff3";
 my $fa_file  = "S_lycopersicum_chromosomes.2.40.fa";
@@ -34,6 +33,7 @@ my $options = GetOptions(
     "threads=i"       => \$threads,
     "out_dir=s"       => \$out_dir,
     "coverage"        => \$coverage,
+    "ref_vs_alt"      => \$ref_vs_alt,
 );
 
 my $snp_file_list = [@ARGV];
@@ -41,7 +41,7 @@ my $snp_file_list = [@ARGV];
 validate_options( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list );
 
 my $genes = get_gene_models($gff_file);
-my $snps = get_snps( $snp_file_list, $par1_id, $par2_id );
+my $snps = get_snps( $snp_file_list, $par1_id, $par2_id, $ref_vs_alt );
 
 make_path $out_dir;
 
@@ -134,7 +134,7 @@ sub get_gene_models {
 }
 
 sub get_snps {
-    my ( $snp_file_list, $par1_id, $par2_id ) = @_;
+    my ( $snp_file_list, $par1_id, $par2_id, $ref_vs_alt ) = @_;
 
     my %snps;
     for my $snp_file (@$snp_file_list) {
@@ -144,8 +144,16 @@ sub get_snps {
             my ( $seqid, $pos, $ref, $alt, $alt_parent ) = split /\t/;
             next if $ref =~ /INS/;
             next if $alt =~ /del/;
-            $snps{$seqid}{$pos}{par1} = $alt_parent eq $par1_id ? $alt : $ref;
-            $snps{$seqid}{$pos}{par2} = $alt_parent eq $par2_id ? $alt : $ref;
+            if ($ref_vs_alt) {
+                $snps{$seqid}{$pos}{par1} = $ref;
+                $snps{$seqid}{$pos}{par2} = $alt;
+            }
+            else {
+                $snps{$seqid}{$pos}{par1}
+                    = $alt_parent eq $par1_id ? $alt : $ref;
+                $snps{$seqid}{$pos}{par2}
+                    = $alt_parent eq $par2_id ? $alt : $ref;
+            }
         }
         close $snp_fh;
     }
