@@ -159,6 +159,49 @@ sub get_snps {
     }
 
     return \%snps;
+
+    # SNPs data structure:
+    # \ {
+    #     SEQUENCE ID   {
+    #         POSITION   {
+    #             par1   PARENT1 ALLELE,
+    #             par2   PARENT2 ALLELE
+    #         },
+    #         POSITION   {
+    #             par1   PARENT1 ALLELE,
+    #             par2   PARENT2 ALLELE
+    #         },
+    #         ...
+    #     },
+    #     ...
+    # }
+    #
+    # Example of hash reference that is returned:
+    # \ {
+    #     SL2.40ch01   {
+    #         13020   {
+    #             par1   "C",
+    #             par2   "T"
+    #         },
+    #         13042   {
+    #             par1   "C",
+    #             par2   "T"
+    #         },
+    #         ...
+    #     },
+    #     SL2.40ch02   {
+    #         583183    {
+    #             par1   "T",
+    #             par2   "G"
+    #         },
+    #         583335    {
+    #             par1   "T",
+    #             par2   "C"
+    #         },
+    #         ...
+    #     },
+    #     ...
+    # }
 }
 
 sub write_header {
