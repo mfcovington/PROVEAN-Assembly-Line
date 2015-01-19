@@ -27,9 +27,9 @@ my $options = GetOptions(
 
 my $aa_sub_file_list = [@ARGV];
 
-validate_options( $cds_fasta_file, $threads, $aa_sub_file_list );
+validate_options( $cds_fasta_file, $threads, $out_dir, $aa_sub_file_list );
 
-make_path "$out_dir/$_" for ( 'fa', 'pro', 'sss', 'var' );
+make_path "$out_dir/$_" for ( 'fa', 'pro', 'sss', 'stop', 'var' );
 
 for my $aa_sub_file (@$aa_sub_file_list) {
     open my $aa_sub_fh, "<", $aa_sub_file;
@@ -76,7 +76,7 @@ sub usage {
 }
 
 sub validate_options {
-    my ( $cds_fasta_file, $threads, $aa_sub_file_list ) = @_;
+    my ( $cds_fasta_file, $threads, $out_dir, $aa_sub_file_list ) = @_;
 
     my @errors;
 
@@ -94,6 +94,14 @@ sub validate_options {
     push @errors, "Must specify amino acid substitution files"
         if scalar @$aa_sub_file_list == 0;
 
+    push @errors,
+        "File $out_dir/stop/early.stop already exists (Choose a new --out_dir or remove file)"
+        if -e "$out_dir/stop/early.stop";
+
+    push @errors,
+        "File $out_dir/stop/late.stop already exists (Choose a new --out_dir or remove file)"
+        if -e "$out_dir/stop/late.stop";
+
     if ( scalar @errors > 0 ) {
         my $error_string = join "\n", map {"ERROR: $_"} @errors;
         die join( "\n", usage(), $error_string ), "\n";
@@ -110,6 +118,7 @@ sub write_provean_fa_file {
 
     chomp @cds_seq;
     my $aa_seq = translate( join "", @cds_seq );
+    $aa_seq =~ s/-$//;    # PROVEAN can't deal with '-'
 
     open my $provean_fa_out_fh, ">", "$out_dir/fa/$seq_id.fa";
     print $provean_fa_out_fh $header;
@@ -119,8 +128,28 @@ sub write_provean_fa_file {
 
 sub write_provean_var_file {
     my ( $seq_id, $aa_subs, $out_dir ) = @_;
+    my @early_stop;
 
     open my $provean_var_out_fh, ">", "$out_dir/var/$seq_id.var";
-    say $provean_var_out_fh $_ for split /,/, $aa_subs;
+    for my $aa_sub ( split /,/, $aa_subs ) {
+
+        if ( $aa_sub =~ /-$/ ) {
+            push @early_stop, $aa_sub;
+        }
+        elsif ( $aa_sub =~ /^-/ ) {
+            open my $provean_late_out_fh, ">>", "$out_dir/stop/late.stop";
+            say $provean_late_out_fh join "\t", $seq_id, $aa_sub;
+            close $provean_late_out_fh;
+        }
+        else {
+            say $provean_var_out_fh $aa_sub;
+        }
+    }
     close $provean_var_out_fh;
+
+    if (@early_stop) {
+        open my $provean_early_out_fh, ">>", "$out_dir/stop/early.stop";
+        say $provean_early_out_fh $seq_id, "\t", join ",", @early_stop;
+        close $provean_early_out_fh;
+    }
 }
