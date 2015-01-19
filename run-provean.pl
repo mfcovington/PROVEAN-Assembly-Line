@@ -13,7 +13,7 @@ use amino_acid_translation;
 use File::Path 'make_path';
 use Getopt::Long;
 
-my ( $cds_fasta_file, $supporting_set, $verbose );
+my ( $cds_fasta_file, $supporting_set, $verbose, $help );
 my $threads = 1;
 my $out_dir = '.';
 
@@ -23,11 +23,13 @@ my $options = GetOptions(
     "out_dir=s"        => \$out_dir,
     "supporting_set"   => \$supporting_set,
     "verbose"          => \$verbose,
+    "help"             => \$help,
 );
 
 my $aa_sub_file_list = [@ARGV];
 
-validate_options( $cds_fasta_file, $threads, $out_dir, $aa_sub_file_list );
+validate_options( $cds_fasta_file, $threads, $out_dir, $aa_sub_file_list,
+    $help );
 
 make_path "$out_dir/$_" for ( 'fa', 'pro', 'sss', 'stop', 'var' );
 
@@ -72,11 +74,22 @@ EOF
 }
 
 sub usage {
-    return "<USAGE STATEMENT PLACEHOLDER>\n";
+    return <<EOF;
+
+Usage: $0 [options] --cds_fasta_file <CDS.fa> <Amino acid change file(s)>
+
+Options:
+  -t, --threads           Number of threads to use for PROVEAN [1]
+  -o, --out_dir           Output directory [.]
+  -s, --supporting_set    Supporting set files already exist
+  -v, --verbose           Report current progress of PROVEAN
+  -h, --help              Display this usage information
+
+EOF
 }
 
 sub validate_options {
-    my ( $cds_fasta_file, $threads, $out_dir, $aa_sub_file_list ) = @_;
+    my ( $cds_fasta_file, $threads, $out_dir, $aa_sub_file_list, $help ) = @_;
 
     my @errors;
 
@@ -102,9 +115,12 @@ sub validate_options {
         "File $out_dir/stop/late.stop already exists (Choose a new --out_dir or remove file)"
         if -e "$out_dir/stop/late.stop";
 
-    if ( scalar @errors > 0 ) {
+    if (@errors) {
         my $error_string = join "\n", map {"ERROR: $_"} @errors;
-        die join( "\n", usage(), $error_string ), "\n";
+        die usage(), $error_string, "\n\n";
+    }
+    elsif ($help) {
+        die usage();
     }
 }
 
