@@ -5,7 +5,7 @@ sub translate {
     my $nt_seq = shift;
     my $codon_table = codon_table();
 
-    $nt_seq =~ tr/acgt/ACGT/;
+    $nt_seq =~ tr/acgtuU/ACGTTT/;
     my $pos = 0;
     my $aa_seq;
     while ( $pos < length($nt_seq) - 2 ) {
