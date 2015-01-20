@@ -16,4 +16,4 @@ Use `run-provean.pl` to determine the putative functional severity of the amino 
 - CDS FASTA reference file
 - PROVEAN installation
 
-*Version 0.1.0*
+*Version 0.1.1*
