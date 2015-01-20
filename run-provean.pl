@@ -9,9 +9,12 @@ use warnings;
 use Log::Reproducible;
 use autodie;
 use feature 'say';
-use amino_acid_translation;
 use File::Path 'make_path';
 use Getopt::Long;
+
+use FindBin;
+use lib "$FindBin::Bin";
+use amino_acid_translation;
 
 my ( $cds_fasta_file, $supporting_set, $force, $verbose, $help );
 my $threads = 1;
