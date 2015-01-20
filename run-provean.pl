@@ -11,6 +11,7 @@ use autodie;
 use feature 'say';
 use File::Path 'make_path';
 use Getopt::Long;
+use Parallel::ForkManager;
 use POSIX 'strftime';
 
 use FindBin;
@@ -41,28 +42,31 @@ make_path "$out_dir/$_" for ( 'fa', 'pro', 'sss', 'stop', 'var' );
 for my $aa_sub_file (@$aa_sub_file_list) {
     open my $aa_sub_fh, "<", $aa_sub_file;
     <$aa_sub_fh>;
+    my $pm = new Parallel::ForkManager($threads);
     while (<$aa_sub_fh>) {
         chomp;
         my ( $seq_id, $aa_subs ) = ( split /\t/ )[ 0, 4 ];
         next unless defined $aa_subs;
 
+        my $pid = $pm->start and next;
         write_provean_fa_file( $seq_id, $cds_fasta_file, $out_dir );
         write_provean_var_file( $seq_id, $aa_subs, $out_dir );
-        run_provean( $seq_id, $out_dir, $threads, $supporting_set, $verbose );
+        run_provean( $seq_id, $out_dir, $supporting_set, $verbose );
+        $pm->finish;
     }
+    $pm->wait_all_children;
     close $aa_sub_fh;
 }
 
 exit;
 
 sub run_provean {
-    my ( $seq_id, $out_dir, $threads, $supporting_set, $verbose ) = @_;
+    my ( $seq_id, $out_dir, $supporting_set, $verbose ) = @_;
 
     my $provean_cmd = <<EOF;
 provean.sh \\
   -q $out_dir/fa/$seq_id.fa \\
   -v $out_dir/var/$seq_id.var \\
-  --num_threads $threads \\
 EOF
 
     if ($supporting_set) {
