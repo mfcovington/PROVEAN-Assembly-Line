@@ -9,10 +9,11 @@ use warnings;
 use Log::Reproducible;
 use autodie;
 use feature 'say';
-use Parallel::ForkManager;
+use amino_acid_translation;
 use Capture::Tiny 'capture_stderr';
 use File::Path 'make_path';
 use Getopt::Long;
+use Parallel::ForkManager;
 
 my ( $coverage, $par1_bam_file, $par2_bam_file, $ref_vs_alt );
 
