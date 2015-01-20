@@ -13,7 +13,7 @@ use amino_acid_translation;
 use File::Path 'make_path';
 use Getopt::Long;
 
-my ( $cds_fasta_file, $supporting_set, $verbose, $help );
+my ( $cds_fasta_file, $supporting_set, $force, $verbose, $help );
 my $threads = 1;
 my $out_dir = '.';
 
@@ -22,6 +22,7 @@ my $options = GetOptions(
     "threads=i"        => \$threads,
     "out_dir=s"        => \$out_dir,
     "supporting_set"   => \$supporting_set,
+    "force"            => \$force,
     "verbose"          => \$verbose,
     "help"             => \$help,
 );
@@ -29,7 +30,7 @@ my $options = GetOptions(
 my $aa_sub_file_list = [@ARGV];
 
 validate_options( $cds_fasta_file, $threads, $out_dir, $aa_sub_file_list,
-    $help );
+    $force, $help );
 
 make_path "$out_dir/$_" for ( 'fa', 'pro', 'sss', 'stop', 'var' );
 
@@ -89,7 +90,7 @@ EOF
 }
 
 sub validate_options {
-    my ( $cds_fasta_file, $threads, $out_dir, $aa_sub_file_list, $help ) = @_;
+    my ( $cds_fasta_file, $threads, $out_dir, $aa_sub_file_list, $force, $help ) = @_;
 
     my @errors;
 
@@ -107,13 +108,15 @@ sub validate_options {
     push @errors, "Must specify amino acid substitution files"
         if scalar @$aa_sub_file_list == 0;
 
-    push @errors,
-        "File $out_dir/stop/early.stop already exists (Choose a new --out_dir or remove file)"
-        if -e "$out_dir/stop/early.stop";
+    unless ($force) {
+        push @errors,
+            "File $out_dir/stop/early.stop already exists (Choose a new --out_dir, remove file, or use --force to overwrite)"
+            if -e "$out_dir/stop/early.stop";
 
-    push @errors,
-        "File $out_dir/stop/late.stop already exists (Choose a new --out_dir or remove file)"
-        if -e "$out_dir/stop/late.stop";
+        push @errors,
+            "File $out_dir/stop/late.stop already exists (Choose a new --out_dir, remove file, or use --force to overwrite)"
+            if -e "$out_dir/stop/late.stop";
+    }
 
     if (@errors) {
         my $error_string = join "\n", map {"ERROR: $_"} @errors;
