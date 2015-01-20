@@ -136,6 +136,9 @@ sub write_provean_fa_file {
     my $aa_seq = translate( join "", @cds_seq );
     $aa_seq =~ s/-$//;    # PROVEAN can't deal with '-'
 
+    say STDERR "WARNING: $seq_id contains an unexpected interior STOP codon"
+        if $aa_seq =~ /-/;
+
     open my $provean_fa_out_fh, ">", "$out_dir/fa/$seq_id.fa";
     print $provean_fa_out_fh $header;
     say $provean_fa_out_fh $_ for unpack "(A$fa_width)*", $aa_seq;
