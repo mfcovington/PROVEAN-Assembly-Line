@@ -4,4 +4,11 @@
 *.bai
 *.gff
 *.gff3
+*.pro
+*.sss
+*.var
+aa-changes*
 polyDB.*
+provean-in.*
+output-files/
+repro-archive/
