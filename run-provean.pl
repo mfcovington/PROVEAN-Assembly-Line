@@ -118,6 +118,8 @@ sub validate_options {
             if -e "$out_dir/stop/late.stop";
     }
 
+    push @errors, "PROVEAN not installed in PATH" unless `which provean`;
+
     if (@errors) {
         my $error_string = join "\n", map {"ERROR: $_"} @errors;
         die usage(), $error_string, "\n\n";
