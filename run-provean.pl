@@ -11,6 +11,7 @@ use autodie;
 use feature 'say';
 use File::Path 'make_path';
 use Getopt::Long;
+use POSIX 'strftime';
 
 use FindBin;
 use lib "$FindBin::Bin";
@@ -73,7 +74,11 @@ EOF
 
     $provean_cmd .= " \\\n  > $out_dir/pro/$seq_id.pro\n";
 
-    say STDERR $seq_id if $verbose;
+    if ($verbose) {
+        my $timestamp = strftime "%Y-%m-%d %H:%M:%S", localtime;
+        say $timestamp;
+        say STDERR "$timestamp - $seq_id" if $verbose;
+    }
     system($provean_cmd);
 }
 
