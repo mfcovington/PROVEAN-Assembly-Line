@@ -83,7 +83,11 @@ EOF
         say $timestamp;
         say STDERR "$timestamp - $seq_id" if $verbose;
     }
-    system($provean_cmd);
+
+    if ( -s "$out_dir/var/$seq_id.var" ) {
+        system($provean_cmd);
+    }
+    else {return}    # Don't run if only aa subs were early/late STOP codons
 }
 
 sub usage {
