@@ -29,7 +29,7 @@ if ( defined $gene ) {
     push @$gene_list, $gene;
 }
 elsif ( defined $list ) {
-
+    $gene_list = get_genes_in_list($list);
 }
 elsif ( defined $range ) {
 
@@ -47,6 +47,17 @@ sub do_or_die {
         my $error_string = join "\n", map {"ERROR: $_"} @$errors;
         die usage(), $error_string, "\n\n";
     }
+}
+
+sub get_genes_in_list {
+    my $gene_list_file = shift;
+
+    open my $gene_list_fh, "<", $gene_list_file;
+    my @gene_list = <$gene_list_fh>;
+    close $gene_list_fh;
+    chomp @gene_list;
+
+    return \@gene_list;
 }
 
 sub usage {
