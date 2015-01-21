@@ -24,8 +24,9 @@ my $options = GetOptions(
 
 validate_options( $gene, $list, $range, $out_dir, $help );
 
+my $gene_list;
 if ( defined $gene ) {
-
+    push @$gene_list, $gene;
 }
 elsif ( defined $list ) {
 
