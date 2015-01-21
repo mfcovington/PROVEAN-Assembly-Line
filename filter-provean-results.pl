@@ -54,14 +54,14 @@ sub usage {
 Usage: $0 [options] <--filter_method> <filter_argument>
 
 Filter Methods (Specify only one):
-  -g, --gene
-  -l, --list
-  -r, --range
+  -g, --gene       Specify a single gene (--gene Solyc08g065870.2.1)
+  -l, --list       Specify a file with a list of genes (one gene per line)
+  -r, --range      Specify a genomic range (--range SL2.40ch01:619126-1047293)
 
 Options:
-  -o, --out_dir           Output directory [.]
-  -v, --verbose           Print filter summary to STDOUT
-  -h, --help              Display this usage information
+  -o, --out_dir    Output directory [.]
+  -v, --verbose    Print filter summary to STDOUT
+  -h, --help       Display this usage information
 
 EOF
 }
