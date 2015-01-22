@@ -8,6 +8,7 @@ use strict;
 use warnings;
 use autodie;
 use feature 'say';
+use File::Path 'make_path';
 use Getopt::Long;
 use List::Util 'sum';
 
@@ -50,6 +51,9 @@ my $subs = {};
 get_nonsense_subs( 'early', $subs, $gene_list, $out_dir );
 get_nonsense_subs( 'late',  $subs, $gene_list, $out_dir );
 get_missense_subs( $subs, $gene_list, $out_dir );
+
+make_path $filtered_dir;
+write_filtered_results( $subs, $filtered_out_file );
 
 exit;
 
@@ -202,9 +206,44 @@ sub validate_provean_version {
 }
 
 sub write_filtered_results {
-    my ( $filtered_out_file ) = @_;
+    my ( $subs, $filtered_out_file ) = @_;
 
     open my $filtered_out_fh, ">", $filtered_out_file;
-    say $filtered_out_fh join "\t", 'gene', 'missense', 'nonsense', 'late stop';
+    say $filtered_out_fh join "\t", 'gene', 'sub number', 'substitution',
+        'sub type', 'PROVEAN score', 'sequence clusters',
+        'supporting sequences';
+
+    for my $gene ( sort keys %$subs ) {
+        my $sub_count = 0;
+
+        if ( exists $$subs{$gene}{'early'} ) {
+            for my $aa_sub ( @{ $$subs{$gene}{'early'} } ) {
+                $sub_count++;
+                say $filtered_out_fh join "\t", $gene, $sub_count, $aa_sub,
+                    'nonsense', 'NA', 'NA', 'NA';
+            }
+        }
+
+        if ( exists $$subs{$gene}{'late'} ) {
+            for my $aa_sub ( @{ $$subs{$gene}{'late'} } ) {
+                $sub_count++;
+                say $filtered_out_fh join "\t", $gene, $sub_count, $aa_sub,
+                    'late stop', 'NA', 'NA', 'NA';
+            }
+        }
+
+        if ( exists $$subs{$gene}{'subs'} ) {
+            my $cluster_count  = $$subs{$gene}{'subs'}{'clusters'};
+            my $sequence_count = $$subs{$gene}{'subs'}{'sequences'};
+
+            for my $provean_score ( @{ $$subs{$gene}{'subs'}{'scores'} } ) {
+                $sub_count++;
+                my $aa_sub = $$provean_score[0];
+                my $score  = $$provean_score[1];
+                say $filtered_out_fh join "\t", $gene, $sub_count, $aa_sub,
+                    'missense', $score, $cluster_count, $sequence_count;
+            }
+        }
+    }
     close $filtered_out_fh;
 }
