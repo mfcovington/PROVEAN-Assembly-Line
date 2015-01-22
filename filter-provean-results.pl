@@ -29,15 +29,21 @@ my $options = GetOptions(
 
 validate_options( $gene, $gene_list_file, $range, $gff_file, $out_dir, $help );
 
+my $filtered_dir = "$out_dir/filtered";
+my $filtered_out_file = "$filtered_dir/provean.";
 my $gene_list = {};
 if ( defined $gene ) {
     $$gene_list{$gene}++;
+    $filtered_out_file .= $gene;
 }
 elsif ( defined $gene_list_file ) {
     get_genes_in_list( $gene_list, $gene_list_file );
+    $filtered_out_file .= $gene_list_file;
 }
 elsif ( defined $range ) {
     get_genes_in_range( $gene_list, $range, $gff_file );
+    $range =~ s/:/_/;
+    $filtered_out_file .= $range;
 }
 
 my $subs = {};
