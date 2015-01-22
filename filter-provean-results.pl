@@ -6,6 +6,7 @@
 #
 use strict;
 use warnings;
+use Log::Reproducible;
 use autodie;
 use feature 'say';
 use File::Basename;
