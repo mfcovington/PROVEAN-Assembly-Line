@@ -9,6 +9,7 @@
 *.var
 aa-changes*
 polyDB.*
+provean.*
 provean-in.*
 output-files/
 repro-archive/

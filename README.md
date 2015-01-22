@@ -16,4 +16,8 @@ Use `run-provean.pl` to determine the putative functional severity of the amino 
 - CDS FASTA reference file
 - PROVEAN installation
 
-*Version 0.2.0*
+### Filter PROVEAN results
+
+Use `filter-provean-results.pl` to filter PROVEAN results for a single gene, a file containing a list of genes, or all genes within a genomic range.
+
+*Version 0.3.0*
