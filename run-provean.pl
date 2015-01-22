@@ -80,7 +80,6 @@ EOF
 
     if ($verbose) {
         my $timestamp = strftime "%Y-%m-%d %H:%M:%S", localtime;
-        say $timestamp;
         say STDERR "$timestamp - $seq_id" if $verbose;
     }
 
