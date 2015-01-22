@@ -8,6 +8,7 @@ use strict;
 use warnings;
 use autodie;
 use feature 'say';
+use File::Basename;
 use File::Path 'make_path';
 use Getopt::Long;
 use List::Util 'sum';
@@ -39,7 +40,8 @@ if ( defined $gene ) {
 }
 elsif ( defined $gene_list_file ) {
     get_genes_in_list( $gene_list, $gene_list_file );
-    $filtered_out_file .= $gene_list_file;
+    my $basename = basename($gene_list_file);
+    $filtered_out_file .= $basename;
 }
 elsif ( defined $range ) {
     get_genes_in_range( $gene_list, $range, $gff_file );
@@ -70,7 +72,7 @@ sub do_or_die {
 }
 
 sub get_genes_in_list {
-    my ( $gene_list, $gene_list_file ) = shift;
+    my ( $gene_list, $gene_list_file ) = @_;
 
     open my $gene_list_fh, "<", $gene_list_file;
     for (<$gene_list_fh>) {
