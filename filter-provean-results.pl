@@ -43,6 +43,7 @@ elsif ( defined $range ) {
 my $subs = {};
 get_nonsense_subs( 'early', $subs, $gene_list, $out_dir );
 get_nonsense_subs( 'late',  $subs, $gene_list, $out_dir );
+get_missense_subs( $subs, $gene_list, $out_dir );
 
 exit;
 
@@ -82,6 +83,22 @@ sub get_genes_in_range {
     }
 }
 
+sub get_missense_subs {
+    my ( $subs, $gene_list, $out_dir ) = @_;
+
+    for my $gene ( sort keys %$gene_list ) {
+        my $provean_file = "$out_dir/pro/$gene.pro";
+        my ( $cluster_count, $sequence_count, $provean_scores )
+            = parse_provean($provean_file);
+
+        if ( scalar @$provean_scores ) {
+            $$subs{$gene}{subs}{clusters} = $cluster_count;
+            $$subs{$gene}{subs}{sequences} = $sequence_count;
+            $$subs{$gene}{subs}{scores} = $provean_scores;
+        }
+    }
+}
+
 sub get_nonsense_subs {
     my ( $early_or_late, $subs, $gene_list, $out_dir ) = @_;
 
@@ -93,6 +110,40 @@ sub get_nonsense_subs {
         $$subs{$seq_id}{$early_or_late} = \@stops;
     }
     close $stop_fh;
+}
+
+sub parse_provean {
+    my $provean_file = shift;
+    my $cluster_count;
+    my $sequence_count;
+    my @provean_scores;
+
+    if ( -e $provean_file ) {
+        open my $provean_fh, "<", $provean_file;
+
+        my $provean_version = <$provean_fh>;
+        validate_provean_version($provean_version);
+
+        for (<$provean_fh>) {
+            if (/^\[/) {    # Skip timestamps
+                next
+            }
+            elsif (/# Number of clusters:\t(\d+)/) {
+                $cluster_count = $1;
+            }
+            elsif (/# Number of supporting sequences used:\t(\d+)/) {
+                $sequence_count = $1;
+            }
+            elsif (/^(.+)\t(-?[\d.]+)$/) {
+                my $aa_sub = $1;
+                my $score  = $2;
+                push @provean_scores, [ $aa_sub, $score ];
+            }
+        }
+        close $provean_fh;
+    }
+
+    return $cluster_count, $sequence_count, \@provean_scores;
 }
 
 sub usage {
@@ -134,4 +185,20 @@ sub validate_options {
         unless -e $provean_out_dir && -d $provean_out_dir;
 
     do_or_die( $help, \@errors );
+}
+
+sub validate_provean_version {
+    my $provean_version = shift;
+    my $expected_provean_version = "PROVEAN v1.1 output";
+    warn
+        "Warning for $gene: Expected $expected_provean_version but found $provean_version"
+        if $provean_version !~ /^## $expected_provean_version ##$/;
+}
+
+sub write_filtered_results {
+    my ( $filtered_out_file ) = @_;
+
+    open my $filtered_out_fh, ">", $filtered_out_file;
+    say $filtered_out_fh join "\t", 'gene', 'missense', 'nonsense', 'late stop';
+    close $filtered_out_fh;
 }
