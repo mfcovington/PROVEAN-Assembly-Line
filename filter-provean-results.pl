@@ -36,6 +36,10 @@ elsif ( defined $range ) {
     get_genes_in_range( $gene_list, $range, $gff_file );
 }
 
+my $subs = {};
+get_nonsense_subs( 'early', $subs, $gene_list, $out_dir );
+get_nonsense_subs( 'late',  $subs, $gene_list, $out_dir );
+
 exit;
 
 sub do_or_die {
@@ -72,6 +76,19 @@ sub get_genes_in_range {
         my $mrna_end   = $$genes{$chr}{$mrna}{cds}->[-1]->{end};
         $$gene_list{$mrna}++ if $mrna_end >= $start && $mrna_start <= $end;
     }
+}
+
+sub get_nonsense_subs {
+    my ( $early_or_late, $subs, $gene_list, $out_dir ) = @_;
+
+    open my $stop_fh, "<", "$out_dir/stop/$early_or_late.stop";
+    for (<$stop_fh>) {
+        chomp;
+        my ( $seq_id, @stops ) = split /[\t,]/;
+        next unless exists $$gene_list{$seq_id};
+        $$subs{$seq_id}{$early_or_late} = \@stops;
+    }
+    close $stop_fh;
 }
 
 sub usage {
