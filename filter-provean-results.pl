@@ -11,12 +11,11 @@ use feature 'say';
 use Getopt::Long;
 use List::Util 'sum';
 
-my ( $gene, $list, $range, $help, $verbose );
-my ( $gene, $list, $range, $gff_file, $help, $verbose );
+my ( $gene, $gene_list_file, $range, $gff_file, $help, $verbose );
 my $out_dir = '.';
 my $options = GetOptions(
     "gene=s"     => \$gene,
-    "list=s"     => \$list,
+    "list=s"     => \$gene_list_file,
     "range=s"    => \$range,
     "gff_file=s" => \$gff_file,
     "out_dir=s"  => \$out_dir,
@@ -24,17 +23,17 @@ my $options = GetOptions(
     "verbose"    => \$verbose,
 );
 
-validate_options( $gene, $list, $range, $gff_file, $out_dir, $help );
+validate_options( $gene, $gene_list_file, $range, $gff_file, $out_dir, $help );
 
-my $gene_list;
+my $gene_list = {};
 if ( defined $gene ) {
-    push @$gene_list, $gene;
+    $$gene_list{$gene}++;
 }
-elsif ( defined $list ) {
-    $gene_list = get_genes_in_list($list);
+elsif ( defined $gene_list_file ) {
+    get_genes_in_list( $gene_list, $gene_list_file );
 }
 elsif ( defined $range ) {
-    $gene_list = get_genes_in_range( $range, $gff_file );
+    get_genes_in_range( $gene_list, $range, $gff_file );
 }
 
 exit;
@@ -52,30 +51,27 @@ sub do_or_die {
 }
 
 sub get_genes_in_list {
-    my $gene_list_file = shift;
+    my ( $gene_list, $gene_list_file ) = shift;
 
     open my $gene_list_fh, "<", $gene_list_file;
-    my @gene_list = <$gene_list_fh>;
+    for (<$gene_list_fh>) {
+        chomp;
+        $$gene_list{$_}++;
+    }
     close $gene_list_fh;
-    chomp @gene_list;
-
-    return \@gene_list;
 }
 
 sub get_genes_in_range {
-    my ( $range, $gff_file ) = @_;
+    my ( $gene_list, $range, $gff_file ) = @_;
     my ( $chr, $start, $end ) = split /[:-]/, $range;
 
     my $genes = get_gene_models($gff_file);
 
-    my @gene_list;
     for my $mrna ( sort keys %{ $$genes{$chr} } ) {
         my $mrna_start = $$genes{$chr}{$mrna}{cds}->[0]->{start};
         my $mrna_end   = $$genes{$chr}{$mrna}{cds}->[-1]->{end};
-        push @gene_list, $mrna if $mrna_end >= $start && $mrna_start <= $end;
+        $$gene_list{$mrna}++ if $mrna_end >= $start && $mrna_start <= $end;
     }
-
-    return \@gene_list;
 }
 
 sub usage {
