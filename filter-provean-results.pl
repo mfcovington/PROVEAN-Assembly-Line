@@ -11,6 +11,10 @@ use feature 'say';
 use Getopt::Long;
 use List::Util 'sum';
 
+use FindBin;
+use lib "$FindBin::Bin";
+use provean_assembly_line;
+
 my ( $gene, $gene_list_file, $range, $gff_file, $help, $verbose );
 my $out_dir = '.';
 my $options = GetOptions(
