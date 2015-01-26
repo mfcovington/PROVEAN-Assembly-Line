@@ -39,10 +39,10 @@ validate_options( $cds_fasta_file, $threads, $out_dir, $aa_sub_file_list,
 
 make_path "$out_dir/$_" for ( 'fa', 'pro', 'sss', 'stop', 'var' );
 
+my $pm = new Parallel::ForkManager($threads);
 for my $aa_sub_file (@$aa_sub_file_list) {
     open my $aa_sub_fh, "<", $aa_sub_file;
     <$aa_sub_fh>;
-    my $pm = new Parallel::ForkManager($threads);
     while (<$aa_sub_fh>) {
         chomp;
         my ( $seq_id, $aa_subs ) = ( split /\t/ )[ 0, 4 ];
@@ -54,9 +54,9 @@ for my $aa_sub_file (@$aa_sub_file_list) {
         run_provean( $seq_id, $out_dir, $supporting_set, $verbose );
         $pm->finish;
     }
-    $pm->wait_all_children;
     close $aa_sub_fh;
 }
+$pm->wait_all_children;
 
 exit;
 
