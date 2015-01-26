@@ -114,15 +114,18 @@ sub get_missense_subs {
 
 sub get_nonsense_subs {
     my ( $early_or_late, $subs, $gene_list, $out_dir ) = @_;
+    my $stop_file = "$out_dir/stop/$early_or_late.stop";
 
-    open my $stop_fh, "<", "$out_dir/stop/$early_or_late.stop";
-    for (<$stop_fh>) {
-        chomp;
-        my ( $seq_id, @stops ) = split /[\t,]/;
-        next unless exists $$gene_list{$seq_id};
-        $$subs{$seq_id}{$early_or_late} = \@stops;
+    if ( -e $stop_file ) {
+        open my $stop_fh, "<", $stop_file;
+        for (<$stop_fh>) {
+            chomp;
+            my ( $seq_id, @stops ) = split /[\t,]/;
+            next unless exists $$gene_list{$seq_id};
+            $$subs{$seq_id}{$early_or_late} = \@stops;
+        }
+        close $stop_fh;
     }
-    close $stop_fh;
 }
 
 sub parse_provean {
