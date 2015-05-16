@@ -25,9 +25,9 @@ sub usage {
 Usage: $0 [options] --gff_file <gene_models.gff3> --fa_file <reference.fa> <SNP file(s)>
 
 Options:
-  -r, --ref_vs_alt     **PROVEAN requires this!**
-  --par1_id            Parent 1 ID [M82_n05]
-  --par2_id            Parent 2 ID [PEN]
+  --pvp                Parent 1 vs Parent 2 (Incompatible with PROVEAN unless Parent 1 is reference)
+  --par1_id            Parent 1 ID [M82_n05] (Required when using '--pvp')
+  --par2_id            Parent 2 ID [PEN] (Required when using '--pvp')
   -c, --coverage       Report coverage for each SNP per parent
   --par1_bam_file      Parent 1 BAM file (Required when using '--coverage')
   --par2_bam_file      Parent 2 BAM file (Required when using '--coverage')
@@ -38,7 +38,7 @@ Options:
 EOF
 }
 
-my ( $coverage, $par1_bam_file, $par2_bam_file, $ref_vs_alt, $help );
+my ( $coverage, $par1_bam_file, $par2_bam_file, $pvp, $help );
 
 my $gff_file = "ITAG2.3_gene_models.gff3";
 my $fa_file  = "S_lycopersicum_chromosomes.2.40.fa";
@@ -57,7 +57,7 @@ my $options = GetOptions(
     "threads=i"       => \$threads,
     "out_dir=s"       => \$out_dir,
     "coverage"        => \$coverage,
-    "ref_vs_alt"      => \$ref_vs_alt,
+    "pvp"             => \$pvp,
     "help"            => \$help,
 );
 
@@ -67,7 +67,7 @@ validate_options( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list,
     $help );
 
 my $genes = get_gene_models($gff_file);
-my $snps = get_snps( $snp_file_list, $par1_id, $par2_id, $ref_vs_alt );
+my $snps = get_snps( $snp_file_list, $par1_id, $par2_id, $pvp );
 
 make_path $out_dir;
 
@@ -136,7 +136,7 @@ sub validate_options {
 }
 
 sub get_snps {
-    my ( $snp_file_list, $par1_id, $par2_id, $ref_vs_alt ) = @_;
+    my ( $snp_file_list, $par1_id, $par2_id, $pvp ) = @_;
 
     my %snps;
     for my $snp_file (@$snp_file_list) {
@@ -146,15 +146,15 @@ sub get_snps {
             my ( $seqid, $pos, $ref, $alt, $alt_parent ) = split /\t/;
             next if $ref =~ /INS/;
             next if $alt =~ /del/;
-            if ($ref_vs_alt) {
-                $snps{$seqid}{$pos}{par1} = $ref;
-                $snps{$seqid}{$pos}{par2} = $alt;
-            }
-            else {
+            if ($pvp) {
                 $snps{$seqid}{$pos}{par1}
                     = $alt_parent eq $par1_id ? $alt : $ref;
                 $snps{$seqid}{$pos}{par2}
                     = $alt_parent eq $par2_id ? $alt : $ref;
+            }
+            else {
+                $snps{$seqid}{$pos}{par1} = $ref;
+                $snps{$seqid}{$pos}{par2} = $alt;
             }
         }
         close $snp_fh;
