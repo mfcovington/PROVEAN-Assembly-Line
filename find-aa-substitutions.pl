@@ -38,11 +38,11 @@ Options:
 EOF
 }
 
-my ( $pvp, $par1_id, $par2_id, $coverage, $par1_bam_file, $par2_bam_file,
-    $help );
+my ($gff_file,      $fa_file,       $pvp,
+    $par1_id,       $par2_id,       $coverage,
+    $par1_bam_file, $par2_bam_file, $help
+);
 
-my $gff_file = "ITAG2.3_gene_models.gff3";
-my $fa_file  = "S_lycopersicum_chromosomes.2.40.fa";
 my $threads  = 3;
 my $out_dir  = ".";
 
@@ -62,8 +62,11 @@ my $options = GetOptions(
 
 my $snp_file_list = [@ARGV];
 
-validate_options( $pvp, $par1_id, $par2_id, $coverage, $par1_bam_file,
-    $par2_bam_file, $snp_file_list, $help );
+validate_options(
+    $gff_file,      $fa_file,  $pvp,           $par1_id,
+    $par2_id,       $coverage, $par1_bam_file, $par2_bam_file,
+    $snp_file_list, $help
+);
 
 my $genes = get_gene_models($gff_file);
 my $snps = get_snps( $snp_file_list, $par1_id, $par2_id, $pvp );
@@ -120,11 +123,15 @@ $pm->wait_all_children;
 exit;
 
 sub validate_options {
-    my ( $pvp, $par1_id, $par2_id, $coverage, $par1_bam_file,
-        $par2_bam_file, $snp_file_list, $help )
-        = @_;
+    my ($gff_file,      $fa_file,  $pvp,           $par1_id,
+        $par2_id,       $coverage, $par1_bam_file, $par2_bam_file,
+        $snp_file_list, $help
+    ) = @_;
 
     die usage() if $help;
+
+    die "ERROR: Must specify '--gff_file'\n" unless defined $gff_file;
+    die "ERROR: Must specify '--fa_file'\n" unless defined $fa_file;
 
     if ($pvp) {
         die
