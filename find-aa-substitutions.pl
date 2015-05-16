@@ -38,12 +38,11 @@ Options:
 EOF
 }
 
-my ( $coverage, $par1_bam_file, $par2_bam_file, $pvp, $help );
+my ( $pvp, $par1_id, $par2_id, $coverage, $par1_bam_file, $par2_bam_file,
+    $help );
 
 my $gff_file = "ITAG2.3_gene_models.gff3";
 my $fa_file  = "S_lycopersicum_chromosomes.2.40.fa";
-my $par1_id  = 'M82_n05';
-my $par2_id  = 'PEN';
 my $threads  = 3;
 my $out_dir  = ".";
 
@@ -63,8 +62,8 @@ my $options = GetOptions(
 
 my $snp_file_list = [@ARGV];
 
-validate_options( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list,
-    $help );
+validate_options( $pvp, $par1_id, $par2_id, $coverage, $par1_bam_file,
+    $par2_bam_file, $snp_file_list, $help );
 
 my $genes = get_gene_models($gff_file);
 my $snps = get_snps( $snp_file_list, $par1_id, $par2_id, $pvp );
@@ -121,10 +120,17 @@ $pm->wait_all_children;
 exit;
 
 sub validate_options {
-    my ( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list, $help )
+    my ( $pvp, $par1_id, $par2_id, $coverage, $par1_bam_file,
+        $par2_bam_file, $snp_file_list, $help )
         = @_;
 
     die usage() if $help;
+
+    if ($pvp) {
+        die
+            "ERROR: --par1_id and --par2_id must be specified when using --pvp\n"
+            unless defined $par1_id && defined $par2_id;
+    }
 
     if ($coverage) {
         die
