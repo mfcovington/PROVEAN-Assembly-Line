@@ -19,7 +19,26 @@ use lib "$FindBin::Bin";
 use amino_acid_translation;
 use provean_assembly_line;
 
-my ( $coverage, $par1_bam_file, $par2_bam_file, $ref_vs_alt );
+sub usage {
+    return <<EOF;
+
+Usage: $0 [options] --gff_file <gene_models.gff3> --fa_file <reference.fa> <SNP file(s)>
+
+Options:
+  -r, --ref_vs_alt     **PROVEAN requires this!**
+  --par1_id            Parent 1 ID [M82_n05]
+  --par2_id            Parent 2 ID [PEN]
+  -c, --coverage       Report coverage for each SNP per parent
+  --par1_bam_file      Parent 1 BAM file (Required when using '--coverage')
+  --par2_bam_file      Parent 2 BAM file (Required when using '--coverage')
+  -t, --threads        Number of threads to use [3]
+  -o, --out_dir        Output directory [.]
+  -h, --help           Display this usage information
+
+EOF
+}
+
+my ( $coverage, $par1_bam_file, $par2_bam_file, $ref_vs_alt, $help );
 
 my $gff_file = "ITAG2.3_gene_models.gff3";
 my $fa_file  = "S_lycopersicum_chromosomes.2.40.fa";
@@ -39,11 +58,13 @@ my $options = GetOptions(
     "out_dir=s"       => \$out_dir,
     "coverage"        => \$coverage,
     "ref_vs_alt"      => \$ref_vs_alt,
+    "help"            => \$help,
 );
 
 my $snp_file_list = [@ARGV];
 
-validate_options( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list );
+validate_options( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list,
+    $help );
 
 my $genes = get_gene_models($gff_file);
 my $snps = get_snps( $snp_file_list, $par1_id, $par2_id, $ref_vs_alt );
@@ -100,7 +121,10 @@ $pm->wait_all_children;
 exit;
 
 sub validate_options {
-    my ( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list ) = @_;
+    my ( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list, $help )
+        = @_;
+
+    die usage() if $help;
 
     if ($coverage) {
         die
