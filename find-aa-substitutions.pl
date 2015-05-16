@@ -65,7 +65,7 @@ my $snp_file_list = [@ARGV];
 validate_options(
     $gff_file,      $fa_file,  $pvp,           $par1_id,
     $par2_id,       $coverage, $par1_bam_file, $par2_bam_file,
-    $snp_file_list, $help
+    $snp_file_list, $help,     $threads
 );
 
 my $genes = get_gene_models($gff_file);
@@ -125,7 +125,7 @@ exit;
 sub validate_options {
     my ($gff_file,      $fa_file,  $pvp,           $par1_id,
         $par2_id,       $coverage, $par1_bam_file, $par2_bam_file,
-        $snp_file_list, $help
+        $snp_file_list, $help,     $threads
     ) = @_;
 
     my @errors;
@@ -133,6 +133,9 @@ sub validate_options {
     push @errors, "Must specify '--gff_file'" unless defined $gff_file;
     push @errors, "Must specify '--fa_file'" unless defined $fa_file;
     push @errors, "No SNP file(s) specified" if scalar @$snp_file_list == 0;
+
+    push @errors, "Option '--threads' must be an integer greater than 0"
+        if $threads <= 0;
 
     if ($pvp) {
         push @errors,
