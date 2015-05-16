@@ -130,6 +130,16 @@ sub validate_options {
 
     my @errors;
 
+    for my $file (
+        @$snp_file_list, $gff_file, $fa_file,
+        $par1_bam_file,  $par2_bam_file
+        )
+    {
+        next unless defined $file;
+        push @errors, "File '$file' not found"
+            if !-e $file;
+    }
+
     push @errors, "Must specify '--gff_file'" unless defined $gff_file;
     push @errors, "Must specify '--fa_file'" unless defined $fa_file;
     push @errors, "No SNP file(s) specified" if scalar @$snp_file_list == 0;
