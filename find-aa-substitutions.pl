@@ -128,24 +128,31 @@ sub validate_options {
         $snp_file_list, $help
     ) = @_;
 
-    die usage() if $help;
+    my @errors;
 
-    die "ERROR: Must specify '--gff_file'\n" unless defined $gff_file;
-    die "ERROR: Must specify '--fa_file'\n" unless defined $fa_file;
+    push @errors, "Must specify '--gff_file'" unless defined $gff_file;
+    push @errors, "Must specify '--fa_file'" unless defined $fa_file;
+    push @errors, "No SNP file(s) specified" if scalar @$snp_file_list == 0;
 
     if ($pvp) {
-        die
-            "ERROR: --par1_id and --par2_id must be specified when using --pvp\n"
+        push @errors,
+            "Must specify '--par1_id' and '--par2_id' when using '--pvp'"
             unless defined $par1_id && defined $par2_id;
     }
 
     if ($coverage) {
-        die
-            "ERROR: --par1_bam_file and --par2_bam_file must be specified when using --coverage\n"
+        push @errors,
+            "Must specify '--par1_bam_file' and '--par2_bam_file' when using '--coverage'"
             unless defined $par1_bam_file && defined $par2_bam_file;
     }
 
-    die "ERROR: No SNP file(s) specified\n" if scalar @$snp_file_list == 0;
+    if ($help) {
+        die usage();
+    }
+    elsif (@errors) {
+        my $error_string = join "\n", map {"ERROR: $_"} @errors;
+        die usage(), $error_string, "\n\n";
+    }
 }
 
 sub get_snps {
