@@ -19,12 +19,30 @@ use lib "$FindBin::Bin";
 use amino_acid_translation;
 use provean_assembly_line;
 
-my ( $coverage, $par1_bam_file, $par2_bam_file, $ref_vs_alt );
+sub usage {
+    return <<EOF;
 
-my $gff_file = "ITAG2.3_gene_models.gff3";
-my $fa_file  = "S_lycopersicum_chromosomes.2.40.fa";
-my $par1_id  = 'M82_n05';
-my $par2_id  = 'PEN';
+Usage: $0 [options] --gff_file <gene_models.gff3> --fa_file <reference.fa> <SNP file(s)>
+
+Options:
+  --pvp                Parent 1 vs Parent 2 (Incompatible with PROVEAN unless Parent 1 is reference)
+  --par1_id            Parent 1 ID [M82_n05] (Required when using '--pvp')
+  --par2_id            Parent 2 ID [PEN] (Required when using '--pvp')
+  -c, --coverage       Report coverage for each SNP per parent
+  --par1_bam_file      Parent 1 BAM file (Required when using '--coverage')
+  --par2_bam_file      Parent 2 BAM file (Required when using '--coverage')
+  -t, --threads        Number of threads to use [3]
+  -o, --out_dir        Output directory [.]
+  -h, --help           Display this usage information
+
+EOF
+}
+
+my ($gff_file,      $fa_file,       $pvp,
+    $par1_id,       $par2_id,       $coverage,
+    $par1_bam_file, $par2_bam_file, $help
+);
+
 my $threads  = 3;
 my $out_dir  = ".";
 
@@ -38,15 +56,20 @@ my $options = GetOptions(
     "threads=i"       => \$threads,
     "out_dir=s"       => \$out_dir,
     "coverage"        => \$coverage,
-    "ref_vs_alt"      => \$ref_vs_alt,
+    "pvp"             => \$pvp,
+    "help"            => \$help,
 );
 
 my $snp_file_list = [@ARGV];
 
-validate_options( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list );
+validate_options(
+    $gff_file,      $fa_file,  $pvp,           $par1_id,
+    $par2_id,       $coverage, $par1_bam_file, $par2_bam_file,
+    $snp_file_list, $help,     $threads
+);
 
 my $genes = get_gene_models($gff_file);
-my $snps = get_snps( $snp_file_list, $par1_id, $par2_id, $ref_vs_alt );
+my $snps = get_snps( $snp_file_list, $par1_id, $par2_id, $pvp );
 
 make_path $out_dir;
 
@@ -100,19 +123,53 @@ $pm->wait_all_children;
 exit;
 
 sub validate_options {
-    my ( $coverage, $par1_bam_file, $par2_bam_file, $snp_file_list ) = @_;
+    my ($gff_file,      $fa_file,  $pvp,           $par1_id,
+        $par2_id,       $coverage, $par1_bam_file, $par2_bam_file,
+        $snp_file_list, $help,     $threads
+    ) = @_;
+
+    my @errors;
+
+    for my $file (
+        @$snp_file_list, $gff_file, $fa_file,
+        $par1_bam_file,  $par2_bam_file
+        )
+    {
+        next unless defined $file;
+        push @errors, "File '$file' not found"
+            if !-e $file;
+    }
+
+    push @errors, "Must specify '--gff_file'" unless defined $gff_file;
+    push @errors, "Must specify '--fa_file'" unless defined $fa_file;
+    push @errors, "No SNP file(s) specified" if scalar @$snp_file_list == 0;
+
+    push @errors, "Option '--threads' must be an integer greater than 0"
+        if $threads <= 0;
+
+    if ($pvp) {
+        push @errors,
+            "Must specify '--par1_id' and '--par2_id' when using '--pvp'"
+            unless defined $par1_id && defined $par2_id;
+    }
 
     if ($coverage) {
-        die
-            "ERROR: --par1_bam_file and --par2_bam_file must be specified when using --coverage\n"
+        push @errors,
+            "Must specify '--par1_bam_file' and '--par2_bam_file' when using '--coverage'"
             unless defined $par1_bam_file && defined $par2_bam_file;
     }
 
-    die "ERROR: No SNP file(s) specified\n" if scalar @$snp_file_list == 0;
+    if ($help) {
+        die usage();
+    }
+    elsif (@errors) {
+        my $error_string = join "\n", map {"ERROR: $_"} @errors;
+        die usage(), $error_string, "\n\n";
+    }
 }
 
 sub get_snps {
-    my ( $snp_file_list, $par1_id, $par2_id, $ref_vs_alt ) = @_;
+    my ( $snp_file_list, $par1_id, $par2_id, $pvp ) = @_;
 
     my %snps;
     for my $snp_file (@$snp_file_list) {
@@ -122,15 +179,15 @@ sub get_snps {
             my ( $seqid, $pos, $ref, $alt, $alt_parent ) = split /\t/;
             next if $ref =~ /INS/;
             next if $alt =~ /del/;
-            if ($ref_vs_alt) {
-                $snps{$seqid}{$pos}{par1} = $ref;
-                $snps{$seqid}{$pos}{par2} = $alt;
-            }
-            else {
+            if ($pvp) {
                 $snps{$seqid}{$pos}{par1}
                     = $alt_parent eq $par1_id ? $alt : $ref;
                 $snps{$seqid}{$pos}{par2}
                     = $alt_parent eq $par2_id ? $alt : $ref;
+            }
+            else {
+                $snps{$seqid}{$pos}{par1} = $ref;
+                $snps{$seqid}{$pos}{par2} = $alt;
             }
         }
         close $snp_fh;
