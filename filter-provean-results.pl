@@ -33,22 +33,9 @@ my $options = GetOptions(
 validate_options( $gene, $gene_list_file, $range, $gff_file, $out_dir, $help );
 
 my $filtered_dir = "$out_dir/filtered";
-my $filtered_out_file = "$filtered_dir/provean.";
-my $gene_list = {};
-if ( defined $gene ) {
-    $$gene_list{$gene}++;
-    $filtered_out_file .= $gene;
-}
-elsif ( defined $gene_list_file ) {
-    get_genes_in_list( $gene_list, $gene_list_file );
-    my $basename = basename($gene_list_file);
-    $filtered_out_file .= $basename;
-}
-elsif ( defined $range ) {
-    get_genes_in_range( $gene_list, $range, $gff_file );
-    $range =~ s/:/_/;
-    $filtered_out_file .= $range;
-}
+
+my ( $gene_list, $filtered_out_file )
+    = get_genes( $gene, $gene_list_file, $range, $gff_file, $filtered_dir );
 
 my $subs = {};
 get_nonsense_subs( $subs, $gene_list, $out_dir );
@@ -69,6 +56,30 @@ sub do_or_die {
         my $error_string = join "\n", map {"ERROR: $_"} @$errors;
         die usage(), $error_string, "\n\n";
     }
+}
+
+sub get_genes {
+    my ( $gene, $gene_list_file, $range, $gff_file, $filtered_dir ) = @_;
+    my $filtered_out_file = "$filtered_dir/provean.";
+
+    my $gene_list = {};
+
+    if ( defined $gene ) {
+        $$gene_list{$gene}++;
+        $filtered_out_file .= $gene;
+    }
+    elsif ( defined $gene_list_file ) {
+        get_genes_in_list( $gene_list, $gene_list_file );
+        my $basename = basename($gene_list_file);
+        $filtered_out_file .= $basename;
+    }
+    elsif ( defined $range ) {
+        get_genes_in_range( $gene_list, $range, $gff_file );
+        $range =~ s/:/_/;
+        $filtered_out_file .= $range;
+    }
+
+    return ( $gene_list, $filtered_out_file );
 }
 
 sub get_genes_in_list {
