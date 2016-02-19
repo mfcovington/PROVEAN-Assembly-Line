@@ -51,8 +51,7 @@ elsif ( defined $range ) {
 }
 
 my $subs = {};
-get_nonsense_subs( 'early', $subs, $gene_list, $out_dir );
-get_nonsense_subs( 'late',  $subs, $gene_list, $out_dir );
+get_nonsense_subs( $subs, $gene_list, $out_dir );
 get_missense_subs( $subs, $gene_list, $out_dir );
 
 make_path $filtered_dir;
@@ -113,18 +112,21 @@ sub get_missense_subs {
 }
 
 sub get_nonsense_subs {
-    my ( $early_or_late, $subs, $gene_list, $out_dir ) = @_;
-    my $stop_file = "$out_dir/stop/$early_or_late.stop";
+    my ( $subs, $gene_list, $out_dir ) = @_;
 
-    if ( -e $stop_file ) {
-        open my $stop_fh, "<", $stop_file;
-        for (<$stop_fh>) {
-            chomp;
-            my ( $seq_id, @stops ) = split /[\t,]/;
-            next unless exists $$gene_list{$seq_id};
-            $$subs{$seq_id}{$early_or_late} = \@stops;
+    for my $early_or_late ("early", "late") {
+        my $stop_file = "$out_dir/stop/$early_or_late.stop";
+
+        if ( -e $stop_file ) {
+            open my $stop_fh, "<", $stop_file;
+            for (<$stop_fh>) {
+                chomp;
+                my ( $seq_id, @stops ) = split /[\t,]/;
+                next unless exists $$gene_list{$seq_id};
+                $$subs{$seq_id}{$early_or_late} = \@stops;
+            }
+            close $stop_fh;
         }
-        close $stop_fh;
     }
 }
 
