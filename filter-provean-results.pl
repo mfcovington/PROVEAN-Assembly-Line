@@ -18,7 +18,7 @@ use FindBin;
 use lib "$FindBin::Bin";
 use provean_assembly_line;
 
-my ( $gene, $gene_list_file, $range, $gff_file, $help, $verbose );
+my ( $gene, $gene_list_file, $range, $gff_file, $help, $quiet );
 my $out_dir = '.';
 my $options = GetOptions(
     "gene=s"     => \$gene,
@@ -27,7 +27,7 @@ my $options = GetOptions(
     "gff_file=s" => \$gff_file,
     "out_dir=s"  => \$out_dir,
     "help"       => \$help,
-    "verbose"    => \$verbose,
+    "quiet"      => \$quiet,
 );
 
 validate_options( $gene, $gene_list_file, $range, $gff_file, $out_dir, $help );
@@ -42,7 +42,7 @@ get_nonsense_subs( $subs, $gene_list, $out_dir );
 get_missense_subs( $subs, $gene_list, $out_dir );
 
 make_path $filtered_dir;
-write_filtered_results( $subs, $filtered_out_file );
+write_filtered_results( $subs, $filtered_out_file, $quiet );
 
 exit;
 
@@ -188,7 +188,7 @@ Filter Methods (Specify only one):
 Options:
   --gff_file       GFF3 annotation file (required when filtering by '--range')
   -o, --out_dir    Output directory [.]
-  -v, --verbose    Print filter summary to STDOUT
+  -q, --quiet      Do not print filter summary to STDOUT
   -h, --help       Display this usage information
 
 EOF
@@ -225,7 +225,9 @@ sub validate_provean_version {
 }
 
 sub write_filtered_results {
-    my ( $subs, $filtered_out_file ) = @_;
+    my ( $subs, $filtered_out_file, $quiet ) = @_;
+    my $total_sub_count = 0;
+    my $gene_count = scalar keys %$subs;
 
     open my $filtered_out_fh, ">", $filtered_out_file;
     say $filtered_out_fh join "\t", 'gene', 'sub number', 'substitution',
@@ -263,6 +265,11 @@ sub write_filtered_results {
                     'missense', $score, $cluster_count, $sequence_count;
             }
         }
+
+        $total_sub_count += $sub_count;
     }
     close $filtered_out_fh;
+
+    say "Found $total_sub_count substitution(s) in $gene_count gene(s)."
+        unless $quiet;
 }
