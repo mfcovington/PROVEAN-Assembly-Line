@@ -26,8 +26,8 @@ Usage: $0 [options] --gff_file <gene_models.gff3> --fa_file <reference.fa> <SNP 
 
 Options:
   --pvp                Parent 1 vs Parent 2 (Incompatible with PROVEAN unless Parent 1 is reference)
-  --par1_id            Parent 1 ID [M82_n05] (Required when using '--pvp')
-  --par2_id            Parent 2 ID [PEN] (Required when using '--pvp')
+  --par1_id            Parent 1 ID (Required when using '--pvp')
+  --par2_id            Parent 2 ID (Required when using '--pvp')
   -c, --coverage       Report coverage for each SNP per parent
   --par1_bam_file      Parent 1 BAM file (Required when using '--coverage')
   --par2_bam_file      Parent 2 BAM file (Required when using '--coverage')
