@@ -22,4 +22,4 @@ Requirements:
 
 Use `filter-provean-results.pl` to filter PROVEAN results for a single gene, a file containing a list of genes, or all genes within a genomic range.
 
-*Version 0.3.2*
+*Version 0.4.0*
