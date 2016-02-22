@@ -15,7 +15,7 @@ use Getopt::Long;
 use List::Util 'sum';
 
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../lib";
 use provean_assembly_line;
 
 my ( $gene, $gene_list_file, $range, $gff_file, $help, $quiet );

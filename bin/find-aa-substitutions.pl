@@ -15,7 +15,7 @@ use Getopt::Long;
 use Parallel::ForkManager;
 
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../lib";
 use amino_acid_translation;
 use provean_assembly_line;
 
