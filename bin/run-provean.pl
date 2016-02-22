@@ -15,7 +15,7 @@ use Parallel::ForkManager;
 use POSIX 'strftime';
 
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../lib";
 use amino_acid_translation;
 
 my ( $cds_fasta_file, $supporting_set, $force, $verbose, $help );

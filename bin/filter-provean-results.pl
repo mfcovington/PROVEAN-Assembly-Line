@@ -15,10 +15,10 @@ use Getopt::Long;
 use List::Util 'sum';
 
 use FindBin;
-use lib "$FindBin::Bin";
+use lib "$FindBin::Bin/../lib";
 use provean_assembly_line;
 
-my ( $gene, $gene_list_file, $range, $gff_file, $help, $verbose );
+my ( $gene, $gene_list_file, $range, $gff_file, $help, $quiet );
 my $out_dir = '.';
 my $options = GetOptions(
     "gene=s"     => \$gene,
@@ -27,36 +27,22 @@ my $options = GetOptions(
     "gff_file=s" => \$gff_file,
     "out_dir=s"  => \$out_dir,
     "help"       => \$help,
-    "verbose"    => \$verbose,
+    "quiet"      => \$quiet,
 );
 
 validate_options( $gene, $gene_list_file, $range, $gff_file, $out_dir, $help );
 
 my $filtered_dir = "$out_dir/filtered";
-my $filtered_out_file = "$filtered_dir/provean.";
-my $gene_list = {};
-if ( defined $gene ) {
-    $$gene_list{$gene}++;
-    $filtered_out_file .= $gene;
-}
-elsif ( defined $gene_list_file ) {
-    get_genes_in_list( $gene_list, $gene_list_file );
-    my $basename = basename($gene_list_file);
-    $filtered_out_file .= $basename;
-}
-elsif ( defined $range ) {
-    get_genes_in_range( $gene_list, $range, $gff_file );
-    $range =~ s/:/_/;
-    $filtered_out_file .= $range;
-}
+
+my ( $gene_list, $filtered_out_file )
+    = get_genes( $gene, $gene_list_file, $range, $gff_file, $filtered_dir );
 
 my $subs = {};
-get_nonsense_subs( 'early', $subs, $gene_list, $out_dir );
-get_nonsense_subs( 'late',  $subs, $gene_list, $out_dir );
+get_nonsense_subs( $subs, $gene_list, $out_dir );
 get_missense_subs( $subs, $gene_list, $out_dir );
 
 make_path $filtered_dir;
-write_filtered_results( $subs, $filtered_out_file );
+write_filtered_results( $subs, $filtered_out_file, $quiet );
 
 exit;
 
@@ -70,6 +56,30 @@ sub do_or_die {
         my $error_string = join "\n", map {"ERROR: $_"} @$errors;
         die usage(), $error_string, "\n\n";
     }
+}
+
+sub get_genes {
+    my ( $gene, $gene_list_file, $range, $gff_file, $filtered_dir ) = @_;
+    my $filtered_out_file = "$filtered_dir/provean.";
+
+    my $gene_list = {};
+
+    if ( defined $gene ) {
+        $$gene_list{$gene}++;
+        $filtered_out_file .= $gene;
+    }
+    elsif ( defined $gene_list_file ) {
+        get_genes_in_list( $gene_list, $gene_list_file );
+        my $basename = basename($gene_list_file);
+        $filtered_out_file .= $basename;
+    }
+    elsif ( defined $range ) {
+        get_genes_in_range( $gene_list, $range, $gff_file );
+        $range =~ s/:/_/;
+        $filtered_out_file .= $range;
+    }
+
+    return ( $gene_list, $filtered_out_file );
 }
 
 sub get_genes_in_list {
@@ -113,18 +123,21 @@ sub get_missense_subs {
 }
 
 sub get_nonsense_subs {
-    my ( $early_or_late, $subs, $gene_list, $out_dir ) = @_;
-    my $stop_file = "$out_dir/stop/$early_or_late.stop";
+    my ( $subs, $gene_list, $out_dir ) = @_;
 
-    if ( -e $stop_file ) {
-        open my $stop_fh, "<", $stop_file;
-        for (<$stop_fh>) {
-            chomp;
-            my ( $seq_id, @stops ) = split /[\t,]/;
-            next unless exists $$gene_list{$seq_id};
-            $$subs{$seq_id}{$early_or_late} = \@stops;
+    for my $early_or_late ("early", "late") {
+        my $stop_file = "$out_dir/stop/$early_or_late.stop";
+
+        if ( -e $stop_file ) {
+            open my $stop_fh, "<", $stop_file;
+            for (<$stop_fh>) {
+                chomp;
+                my ( $seq_id, @stops ) = split /[\t,]/;
+                next unless exists $$gene_list{$seq_id};
+                $$subs{$seq_id}{$early_or_late} = \@stops;
+            }
+            close $stop_fh;
         }
-        close $stop_fh;
     }
 }
 
@@ -175,7 +188,7 @@ Filter Methods (Specify only one):
 Options:
   --gff_file       GFF3 annotation file (required when filtering by '--range')
   -o, --out_dir    Output directory [.]
-  -v, --verbose    Print filter summary to STDOUT
+  -q, --quiet      Do not print filter summary to STDOUT
   -h, --help       Display this usage information
 
 EOF
@@ -212,7 +225,9 @@ sub validate_provean_version {
 }
 
 sub write_filtered_results {
-    my ( $subs, $filtered_out_file ) = @_;
+    my ( $subs, $filtered_out_file, $quiet ) = @_;
+    my $total_sub_count = 0;
+    my $gene_count = scalar keys %$subs;
 
     open my $filtered_out_fh, ">", $filtered_out_file;
     say $filtered_out_fh join "\t", 'gene', 'sub number', 'substitution',
@@ -250,6 +265,11 @@ sub write_filtered_results {
                     'missense', $score, $cluster_count, $sequence_count;
             }
         }
+
+        $total_sub_count += $sub_count;
     }
     close $filtered_out_fh;
+
+    say "Found $total_sub_count substitution(s) in $gene_count gene(s)."
+        unless $quiet;
 }
