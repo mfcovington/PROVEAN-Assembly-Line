@@ -48,7 +48,7 @@ for my $aa_sub_file (@$aa_sub_file_list) {
         my ( $seq_id, $aa_subs ) = ( split /\t/ )[ 0, 4 ];
         next unless defined $aa_subs;
 
-        my $pid = $pm->start and next;
+        $pm->start and next;
         write_provean_fa_file( $seq_id, $cds_fasta_file, $out_dir );
         write_provean_var_file( $seq_id, $aa_subs, $out_dir );
         run_provean( $seq_id, $out_dir, $supporting_set, $verbose );
